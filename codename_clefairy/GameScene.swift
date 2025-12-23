@@ -55,13 +55,10 @@ class GameScene: SKScene {
         return getLevelConfig(for: level).sequenceLength
     }
     
-    private let masterEmojiPool = [
-        "🐶", "🐱", "🐭", "🐹", "🐰", "🦊", "🐻", "🐼", "🐨", "🐯",
-        "😂", "😍", "😎", "🤔", "😴", "🥳", "😱", "👻", "🤖", "👽",
-        "🍎", "🍌", "🍇", "🍓", "🥝", "🍑", "🍍", "🍉", "🍒", "🥭",
-        "🥦", "🥕", "🌽", "🍅", "🍆", "🥑", "🌶", "🥔", "🥬", "🍄",
-        "⬅️", "➡️", "⬆️", "⬇️", "↗️", "↘️", "↕️", "↔️", "↩️", "↪️"
-    ]
+    // Use selected emoji pack from store
+    private var masterEmojiPool: [String] {
+        return GameManager.shared.selectedEmojiPack.emojis
+    }
     private var activeEmojiPool: [String] = []
     private var currentSequence: [String] = []
     private var userSequence: [String] = []
@@ -106,8 +103,13 @@ class GameScene: SKScene {
     
     private func updateEnvironment() {
         children.filter { $0.name == "bg_element" }.forEach { $0.removeFromParent() }
-        
+
+        // Use selected theme from store
+        let theme = GameManager.shared.selectedTheme
+
+        // Apply theme colors with level-based variations
         if level >= 16 {
+            // Space level - always dark with stars regardless of theme
             backgroundColor = .black
             physicsWorld.gravity = .zero
             for _ in 0..<50 {
@@ -118,23 +120,111 @@ class GameScene: SKScene {
                 star.name = "bg_element"
                 addChild(star)
             }
-        } else if level >= 11 {
-            backgroundColor = SKColor(red: 0.1, green: 0.1, blue: 0.3, alpha: 1.0)
-            let moon = SKShapeNode(circleOfRadius: 40)
-            moon.fillColor = .lightGray
-            moon.position = CGPoint(x: frame.maxX - 60, y: frame.maxY - 60)
-            moon.name = "bg_element"
-            addChild(moon)
-        } else if level >= 6 {
-            backgroundColor = SKColor(red: 1.0, green: 0.6, blue: 0.4, alpha: 1.0)
-            let sun = SKShapeNode(circleOfRadius: 50)
-            sun.fillColor = .yellow
-            sun.position = CGPoint(x: 80, y: frame.maxY - 80)
-            sun.name = "bg_element"
-            addChild(sun)
         } else {
-            backgroundColor = SKColor(red: 0.25, green: 0.75, blue: 1.00, alpha: 1.0)
-            setupDayBackground()
+            // Apply selected theme
+            backgroundColor = theme.primaryColor
+
+            // Add theme-specific accent element
+            let accentEmoji = SKLabelNode(text: theme.accentEmoji)
+            accentEmoji.fontSize = 60
+            accentEmoji.position = CGPoint(x: frame.maxX - 60, y: frame.maxY - 80)
+            accentEmoji.name = "bg_element"
+            accentEmoji.zPosition = -5
+            addChild(accentEmoji)
+
+            // Add secondary color element (hill or ground)
+            let ground = SKShapeNode()
+            let groundPath = UIBezierPath()
+            groundPath.move(to: CGPoint(x: 0, y: 0))
+            groundPath.addLine(to: CGPoint(x: 0, y: frame.height * 0.2))
+            groundPath.addQuadCurve(to: CGPoint(x: frame.width, y: frame.height * 0.15), controlPoint: CGPoint(x: frame.width * 0.5, y: frame.height * 0.3))
+            groundPath.addLine(to: CGPoint(x: frame.width, y: 0))
+            groundPath.close()
+            ground.path = groundPath.cgPath
+            ground.fillColor = theme.secondaryColor
+            ground.strokeColor = .clear
+            ground.zPosition = -4
+            ground.name = "bg_element"
+            addChild(ground)
+
+            // Add clouds for lighter themes
+            if theme == .daylight || theme == .arctic || theme == .forest {
+                for _ in 0..<4 { spawnCloud() }
+            }
+
+            // Add special effects for certain themes
+            if theme == .space || theme == .night {
+                for _ in 0..<20 {
+                    let star = SKShapeNode(circleOfRadius: CGFloat.random(in: 1...2))
+                    star.fillColor = .white
+                    star.position = CGPoint(x: CGFloat.random(in: 0...frame.width), y: CGFloat.random(in: frame.height * 0.4...frame.height))
+                    star.alpha = CGFloat.random(in: 0.3...0.8)
+                    star.name = "bg_element"
+                    addChild(star)
+                }
+            }
+
+            if theme == .volcano {
+                // Add lava particles
+                let spawnLava = SKAction.run { [weak self] in
+                    guard let self = self else { return }
+                    let lava = SKShapeNode(circleOfRadius: CGFloat.random(in: 3...8))
+                    lava.fillColor = [SKColor.red, SKColor.orange, SKColor.yellow].randomElement()!
+                    lava.strokeColor = .clear
+                    lava.position = CGPoint(x: CGFloat.random(in: 0...self.frame.width), y: 0)
+                    lava.name = "bg_element"
+                    lava.zPosition = -3
+                    self.addChild(lava)
+                    lava.run(SKAction.sequence([
+                        SKAction.moveBy(x: CGFloat.random(in: -30...30), y: CGFloat.random(in: 50...100), duration: 1.5),
+                        SKAction.fadeOut(withDuration: 0.5),
+                        SKAction.removeFromParent()
+                    ]))
+                }
+                run(SKAction.repeatForever(SKAction.sequence([spawnLava, SKAction.wait(forDuration: 0.5)])), withKey: "lava_particles")
+            }
+
+            if theme == .ocean {
+                // Add bubble particles
+                let spawnBubble = SKAction.run { [weak self] in
+                    guard let self = self else { return }
+                    let bubble = SKShapeNode(circleOfRadius: CGFloat.random(in: 4...10))
+                    bubble.fillColor = .white.withAlphaComponent(0.3)
+                    bubble.strokeColor = .white.withAlphaComponent(0.5)
+                    bubble.lineWidth = 1
+                    bubble.position = CGPoint(x: CGFloat.random(in: 0...self.frame.width), y: 0)
+                    bubble.name = "bg_element"
+                    bubble.zPosition = -3
+                    self.addChild(bubble)
+                    bubble.run(SKAction.sequence([
+                        SKAction.moveBy(x: CGFloat.random(in: -20...20), y: self.frame.height + 50, duration: Double.random(in: 4...8)),
+                        SKAction.removeFromParent()
+                    ]))
+                }
+                run(SKAction.repeatForever(SKAction.sequence([spawnBubble, SKAction.wait(forDuration: 0.8)])), withKey: "bubble_particles")
+            }
+
+            if theme == .arctic {
+                // Add snowflake particles
+                let spawnSnow = SKAction.run { [weak self] in
+                    guard let self = self else { return }
+                    let snow = SKLabelNode(text: "❄️")
+                    snow.fontSize = CGFloat.random(in: 10...20)
+                    snow.position = CGPoint(x: CGFloat.random(in: 0...self.frame.width), y: self.frame.height + 20)
+                    snow.name = "bg_element"
+                    snow.zPosition = -3
+                    snow.alpha = CGFloat.random(in: 0.5...0.9)
+                    self.addChild(snow)
+                    snow.run(SKAction.sequence([
+                        SKAction.group([
+                            SKAction.moveBy(x: CGFloat.random(in: -50...50), y: -(self.frame.height + 50), duration: Double.random(in: 5...10)),
+                            SKAction.rotate(byAngle: CGFloat.random(in: -2...2), duration: 5)
+                        ]),
+                        SKAction.removeFromParent()
+                    ]))
+                }
+                run(SKAction.repeatForever(SKAction.sequence([spawnSnow, SKAction.wait(forDuration: 0.6)])), withKey: "snow_particles")
+            }
         }
     }
     
@@ -159,26 +249,43 @@ class GameScene: SKScene {
     private func spawnCloud() {
         let cloudContainer = SKNode()
         cloudContainer.name = "bg_element"
-        let blockSize: CGFloat = 20
-        let cols = Int.random(in: 4...7)
-        let rows = Int.random(in: 2...4)
-        for r in 0..<rows {
-            for c in 0..<cols {
-                if Bool.random() || (r > 0 && r < rows-1 && c > 0 && c < cols-1) {
-                    let block = SKShapeNode(rectOf: CGSize(width: blockSize, height: blockSize))
-                    block.fillColor = .white
-                    block.strokeColor = .clear
-                    block.position = CGPoint(x: CGFloat(c) * blockSize, y: CGFloat(r) * blockSize)
-                    cloudContainer.addChild(block)
-                }
-            }
+
+        // Create soft fluffy cloud using overlapping circles
+        let baseRadius: CGFloat = CGFloat.random(in: 20...35)
+        let numPuffs = Int.random(in: 4...6)
+
+        // Main body puffs
+        for i in 0..<numPuffs {
+            let puffRadius = baseRadius * CGFloat.random(in: 0.6...1.0)
+            let puff = SKShapeNode(circleOfRadius: puffRadius)
+            puff.fillColor = .white
+            puff.strokeColor = .clear
+            let xPos = CGFloat(i) * baseRadius * 0.8
+            let yPos = CGFloat.random(in: -baseRadius * 0.2...baseRadius * 0.2)
+            puff.position = CGPoint(x: xPos, y: yPos)
+            cloudContainer.addChild(puff)
         }
-        cloudContainer.alpha = 0.8
-        cloudContainer.position = CGPoint(x: CGFloat.random(in: 0...frame.width), y: CGFloat.random(in: frame.midY...frame.maxY))
+
+        // Top puffs for fluffy look
+        for i in 0..<(numPuffs - 1) {
+            let puffRadius = baseRadius * CGFloat.random(in: 0.5...0.8)
+            let puff = SKShapeNode(circleOfRadius: puffRadius)
+            puff.fillColor = .white
+            puff.strokeColor = .clear
+            let xPos = CGFloat(i) * baseRadius * 0.8 + baseRadius * 0.4
+            let yPos = baseRadius * CGFloat.random(in: 0.4...0.7)
+            puff.position = CGPoint(x: xPos, y: yPos)
+            cloudContainer.addChild(puff)
+        }
+
+        cloudContainer.alpha = CGFloat.random(in: 0.7...0.9)
+        cloudContainer.position = CGPoint(x: CGFloat.random(in: -100...frame.width), y: CGFloat.random(in: frame.midY...frame.maxY - 100))
         cloudContainer.zPosition = -6
         addChild(cloudContainer)
-        let move = SKAction.moveBy(x: frame.width + 200, y: 0, duration: Double.random(in: 30...60))
-        let reset = SKAction.moveBy(x: -(frame.width + 400), y: 0, duration: 0)
+
+        let duration = Double.random(in: 40...80)
+        let move = SKAction.moveBy(x: frame.width + 300, y: 0, duration: duration)
+        let reset = SKAction.moveBy(x: -(frame.width + 500), y: 0, duration: 0)
         cloudContainer.run(SKAction.repeatForever(SKAction.sequence([move, reset])))
     }
     
@@ -238,24 +345,116 @@ class GameScene: SKScene {
     private func startBossRound() {
         isBossLevel = true
         bossRound = 0
-        levelLabel.text = "BOSS BATTLE!"
-        levelLabel.fontColor = .systemRed
-        
-        // BOSS IS NOW AN OCTOPUS
-        let boss = SKLabelNode(text: "🐙")
-        boss.fontSize = 150
-        boss.position = CGPoint(x: frame.midX, y: frame.maxY - 200)
-        boss.zPosition = 10
-        boss.name = "boss"
-        addChild(boss)
-        bossNode = boss
-        
-        let wobble = SKAction.sequence([
-            SKAction.scaleX(to: 1.1, y: 0.9, duration: 0.5),
-            SKAction.scaleX(to: 0.9, y: 1.1, duration: 0.5)
+
+        // Dramatic screen flash
+        let flashOverlayBoss = SKShapeNode(rectOf: self.size)
+        flashOverlayBoss.position = CGPoint(x: frame.midX, y: frame.midY)
+        flashOverlayBoss.fillColor = .red
+        flashOverlayBoss.strokeColor = .clear
+        flashOverlayBoss.alpha = 0
+        flashOverlayBoss.zPosition = 200
+        addChild(flashOverlayBoss)
+
+        flashOverlayBoss.run(SKAction.sequence([
+            SKAction.fadeAlpha(to: 0.4, duration: 0.1),
+            SKAction.fadeOut(withDuration: 0.3),
+            SKAction.removeFromParent()
+        ]))
+
+        // Warning text
+        let warningLabel = SKLabelNode(fontNamed: "Gameplay")
+        warningLabel.text = "⚠️ BOSS INCOMING ⚠️"
+        warningLabel.fontSize = 28
+        warningLabel.fontColor = .systemRed
+        warningLabel.position = CGPoint(x: frame.midX, y: frame.midY + 200)
+        warningLabel.zPosition = 150
+        warningLabel.alpha = 0
+        addChild(warningLabel)
+
+        let warningAnim = SKAction.sequence([
+            SKAction.fadeIn(withDuration: 0.2),
+            SKAction.repeat(SKAction.sequence([
+                SKAction.fadeAlpha(to: 0.3, duration: 0.15),
+                SKAction.fadeAlpha(to: 1.0, duration: 0.15)
+            ]), count: 4),
+            SKAction.fadeOut(withDuration: 0.3),
+            SKAction.removeFromParent()
         ])
-        boss.run(SKAction.repeatForever(wobble))
-        startNextBossPhase()
+        warningLabel.run(warningAnim)
+
+        // Boss entrance after warning
+        run(SKAction.wait(forDuration: 1.5)) { [weak self] in
+            guard let self = self else { return }
+
+            self.levelLabel.text = "BOSS BATTLE!"
+            self.levelLabel.fontColor = .systemRed
+            if let shadow = self.levelLabel.children.first as? SKLabelNode {
+                shadow.text = "BOSS BATTLE!"
+            }
+
+            // Create boss with dramatic entrance
+            let boss = SKLabelNode(text: "🐙")
+            boss.fontSize = 150
+            boss.position = CGPoint(x: self.frame.midX, y: self.frame.maxY + 150)
+            boss.zPosition = 10
+            boss.name = "boss"
+            boss.setScale(0.3)
+            self.addChild(boss)
+            self.bossNode = boss
+
+            // Entrance animation - slam down
+            let targetY = self.frame.maxY - 200
+            let dropDown = SKAction.move(to: CGPoint(x: self.frame.midX, y: targetY), duration: 0.5)
+            dropDown.timingMode = .easeIn
+            let scaleUp = SKAction.scale(to: 1.0, duration: 0.5)
+            let impact = SKAction.run { [weak self] in
+                guard let self = self else { return }
+                // Screen shake
+                let shake = SKAction.sequence([
+                    SKAction.moveBy(x: 10, y: 0, duration: 0.05),
+                    SKAction.moveBy(x: -20, y: 0, duration: 0.05),
+                    SKAction.moveBy(x: 15, y: -5, duration: 0.05),
+                    SKAction.moveBy(x: -10, y: 5, duration: 0.05),
+                    SKAction.moveBy(x: 5, y: 0, duration: 0.05)
+                ])
+                self.stageNode.run(shake)
+                self.playSound("boss_appear.mp3")
+
+                // Impact particles
+                for _ in 0..<12 {
+                    let particle = SKShapeNode(circleOfRadius: CGFloat.random(in: 5...12))
+                    particle.fillColor = [SKColor.red, SKColor.orange, SKColor.yellow].randomElement()!
+                    particle.strokeColor = .clear
+                    particle.position = CGPoint(x: self.frame.midX, y: targetY - 50)
+                    particle.zPosition = 9
+                    self.addChild(particle)
+
+                    let angle = CGFloat.random(in: 0...(.pi))
+                    let dist = CGFloat.random(in: 80...150)
+                    let dest = CGPoint(x: particle.position.x + cos(angle) * dist, y: particle.position.y + sin(angle) * dist)
+                    particle.run(SKAction.sequence([
+                        SKAction.group([
+                            SKAction.move(to: dest, duration: 0.4),
+                            SKAction.fadeOut(withDuration: 0.4)
+                        ]),
+                        SKAction.removeFromParent()
+                    ]))
+                }
+            }
+
+            boss.run(SKAction.sequence([
+                SKAction.group([dropDown, scaleUp]),
+                impact
+            ])) {
+                // Idle wobble after entrance
+                let wobble = SKAction.sequence([
+                    SKAction.scaleX(to: 1.1, y: 0.9, duration: 0.5),
+                    SKAction.scaleX(to: 0.9, y: 1.1, duration: 0.5)
+                ])
+                boss.run(SKAction.repeatForever(wobble))
+                self.startNextBossPhase()
+            }
+        }
     }
     
     private func startNextBossPhase() {
@@ -384,13 +583,50 @@ class GameScene: SKScene {
     
     private func setupBaseUI() {
         let safeTop = view?.safeAreaInsets.top ?? 50
+
+        // Hearts container with background
+        let heartsContainer = SKNode()
+        heartsContainer.position = CGPoint(x: 100, y: frame.maxY - safeTop - 50)
+        heartsContainer.zPosition = 50
+        addChild(heartsContainer)
+
+        // Subtle background pill for hearts
+        let heartsBg = SKShapeNode(rectOf: CGSize(width: 160, height: 50), cornerRadius: 25)
+        heartsBg.fillColor = .white.withAlphaComponent(0.85)
+        heartsBg.strokeColor = SKColor(red: 1.0, green: 0.4, blue: 0.5, alpha: 0.8)
+        heartsBg.lineWidth = 3
+        heartsContainer.addChild(heartsBg)
+
         for i in 0..<3 {
             let container = SKNode()
-            container.position = CGPoint(x: 60 + (i * 60), y: Int(frame.maxY - safeTop - 50))
-            addChild(container)
-            let hShadow = SKLabelNode(text: "❤️"); hShadow.fontSize = 35; hShadow.fontColor = .black.withAlphaComponent(0.2); hShadow.position = CGPoint(x: 3, y: -3); container.addChild(hShadow)
-            let heart = SKLabelNode(text: "❤️"); heart.fontSize = 35; heart.position = .zero; container.addChild(heart)
+            container.position = CGPoint(x: -50 + (i * 50), y: 0)
+            heartsContainer.addChild(container)
+
+            // Shadow
+            let hShadow = SKLabelNode(text: "❤️")
+            hShadow.fontSize = 32
+            hShadow.alpha = 0.2
+            hShadow.position = CGPoint(x: 2, y: -2)
+            hShadow.zPosition = -1
+            container.addChild(hShadow)
+
+            // Heart
+            let heart = SKLabelNode(text: "❤️")
+            heart.fontSize = 32
+            heart.position = .zero
+            heart.name = "heart_icon"
+            container.addChild(heart)
+
             heartNodes.append(container)
+
+            // Subtle heartbeat animation with stagger
+            let delay = SKAction.wait(forDuration: Double(i) * 0.15)
+            let beat = SKAction.sequence([
+                SKAction.scale(to: 1.15, duration: 0.15),
+                SKAction.scale(to: 1.0, duration: 0.15),
+                SKAction.wait(forDuration: 0.5)
+            ])
+            container.run(SKAction.sequence([delay, SKAction.repeatForever(beat)]))
         }
         
         timerLabel.fontSize = 50; timerLabel.fontColor = .white
@@ -407,15 +643,29 @@ class GameScene: SKScene {
         levelLabel.addChild(levelShadow)
         levelLabel.position = CGPoint(x: frame.midX, y: stageNode.position.y - stageNode.frame.height/2 - 40); addChild(levelLabel)
         
-        let cheatBtn = SKLabelNode(fontNamed: "Gameplay"); cheatBtn.text = "[CHEAT: LVL++]"; cheatBtn.fontSize = 20; cheatBtn.fontColor = .systemRed
-        cheatBtn.position = CGPoint(x: frame.maxX - 80, y: 100); cheatBtn.name = "cheat_lvl_up"; cheatBtn.zPosition = 999; addChild(cheatBtn)
     }
     
     private func updateLivesUI() {
         for (index, node) in heartNodes.enumerated() {
-            if let heart = node.children.last as? SKLabelNode {
-                heart.text = index < lives ? "❤️" : "🖤"
-                node.alpha = index < lives ? 1.0 : 0.4
+            if let heart = node.childNode(withName: "heart_icon") as? SKLabelNode {
+                let isAlive = index < lives
+                heart.text = isAlive ? "❤️" : "🖤"
+                node.alpha = isAlive ? 1.0 : 0.35
+
+                // Stop/restore heartbeat based on state
+                if isAlive {
+                    if node.action(forKey: "heartbeat") == nil {
+                        let beat = SKAction.sequence([
+                            SKAction.scale(to: 1.15, duration: 0.15),
+                            SKAction.scale(to: 1.0, duration: 0.15),
+                            SKAction.wait(forDuration: 0.5)
+                        ])
+                        node.run(SKAction.repeatForever(beat), withKey: "heartbeat")
+                    }
+                } else {
+                    node.removeAction(forKey: "heartbeat")
+                    node.setScale(1.0)
+                }
             }
         }
     }
@@ -567,7 +817,6 @@ class GameScene: SKScene {
         for node in nodes {
             if node.name == "btn_menu" { transitionToMenu(); return }
             else if node.name == "restart_trigger_node" { restartGame(); return }
-            else if node.name == "cheat_lvl_up" { levelUp(); return }
         }
         guard isAcceptingInput else { return }
         for node in nodes {
@@ -656,10 +905,14 @@ class GameScene: SKScene {
     
     private func levelUp() {
         level += 1; playSound("level_up.mp3"); notificationFeedback.notificationOccurred(.success)
-        
-        // --- Dynamic Level Up Effects ---
+
+        // --- Apply Selected Victory Effect from Store ---
+        let selectedEffect = GameManager.shared.selectedEffect
+        spawnVictoryEffect(selectedEffect)
+
+        // --- Dynamic Level Up Effects based on Skin ---
         let skin = GameManager.shared.selectedSkin
-        
+
         switch skin {
         case .classic:
             // Confetti
@@ -690,11 +943,12 @@ class GameScene: SKScene {
                     SKAction.fadeOut(withDuration: 3.0)
                 ])) { leaf.removeFromParent() }
             }
-        case .metal:
-            // Digital Rain
+        case .metal, .galaxy:
+            // Digital Rain / Cosmic particles
+            let particleColor: SKColor = (skin == .galaxy) ? SKColor(red: 0.6, green: 0.3, blue: 1.0, alpha: 1.0) : .cyan
             for _ in 0..<30 {
                 let bit = SKShapeNode(rectOf: CGSize(width: 4, height: 12))
-                bit.fillColor = .cyan
+                bit.fillColor = particleColor
                 bit.strokeColor = .clear
                 bit.position = CGPoint(x: CGFloat.random(in: 0...frame.width), y: frame.height + 20)
                 bit.zPosition = 145
@@ -705,11 +959,12 @@ class GameScene: SKScene {
                     SKAction.removeFromParent()
                 ]))
             }
-        case .jelly:
-            // Rising Bubbles
+        case .jelly, .candy:
+            // Rising Bubbles / Candy particles
+            let bubbleColor: SKColor = (skin == .candy) ? SKColor(red: 1.0, green: 0.7, blue: 0.85, alpha: 0.6) : UIColor.white.withAlphaComponent(0.5)
             for _ in 0..<15 {
                 let bub = SKShapeNode(circleOfRadius: CGFloat.random(in: 5...15))
-                bub.fillColor = UIColor.white.withAlphaComponent(0.5)
+                bub.fillColor = bubbleColor
                 bub.strokeColor = .clear
                 bub.position = CGPoint(x: CGFloat.random(in: 0...frame.width), y: -50)
                 bub.zPosition = 145
@@ -750,6 +1005,140 @@ class GameScene: SKScene {
     }
     
     private func timeUp() { selectionTimer?.invalidate(); isAcceptingInput = false; timerLabel.run(SKAction.fadeOut(withDuration: 0.3)); timerOverlay?.run(SKAction.fadeOut(withDuration: 0.3)); playSound("wrong.mp3"); notificationFeedback.notificationOccurred(.error); loseLife(reason: "TOO SLOW!") }
+
+    // MARK: - Victory Effects from Store
+    private func spawnVictoryEffect(_ effect: SpecialEffectPack) {
+        guard effect != .none else { return }
+
+        let centerX = frame.midX
+        let centerY = frame.midY + 100
+
+        switch effect {
+        case .confetti:
+            for _ in 0..<25 {
+                let conf = SKShapeNode(rectOf: CGSize(width: 8, height: 8))
+                conf.fillColor = [.red, .yellow, .green, .blue, .purple, .orange, .cyan, .magenta].randomElement()!
+                conf.strokeColor = .clear
+                conf.position = CGPoint(x: centerX, y: centerY)
+                conf.zPosition = 200
+                addChild(conf)
+                let angle = CGFloat.random(in: 0...(.pi * 2))
+                let dist = CGFloat.random(in: 80...250)
+                let dest = CGPoint(x: centerX + cos(angle) * dist, y: centerY + sin(angle) * dist - 100)
+                conf.run(SKAction.sequence([
+                    SKAction.group([
+                        SKAction.move(to: dest, duration: 1.0),
+                        SKAction.rotate(byAngle: .pi * 4, duration: 1.0),
+                        SKAction.fadeOut(withDuration: 1.0)
+                    ]),
+                    SKAction.removeFromParent()
+                ]))
+            }
+        case .fireworks:
+            for burst in 0..<3 {
+                run(SKAction.wait(forDuration: Double(burst) * 0.3)) { [weak self] in
+                    guard let self = self else { return }
+                    let burstX = centerX + CGFloat.random(in: -80...80)
+                    let burstY = centerY + CGFloat.random(in: -50...50)
+                    for _ in 0..<15 {
+                        let spark = SKShapeNode(circleOfRadius: CGFloat.random(in: 2...5))
+                        spark.fillColor = [.red, .orange, .yellow, .white, .cyan].randomElement()!
+                        spark.strokeColor = .clear
+                        spark.position = CGPoint(x: burstX, y: burstY)
+                        spark.zPosition = 200
+                        self.addChild(spark)
+                        let angle = CGFloat.random(in: 0...(.pi * 2))
+                        let dist = CGFloat.random(in: 40...120)
+                        let dest = CGPoint(x: burstX + cos(angle) * dist, y: burstY + sin(angle) * dist)
+                        spark.run(SKAction.sequence([
+                            SKAction.group([
+                                SKAction.move(to: dest, duration: 0.6),
+                                SKAction.fadeOut(withDuration: 0.6)
+                            ]),
+                            SKAction.removeFromParent()
+                        ]))
+                    }
+                }
+            }
+        case .hearts:
+            for _ in 0..<15 {
+                let heart = SKLabelNode(text: ["❤️", "💕", "💖", "💗", "💝"].randomElement()!)
+                heart.fontSize = CGFloat.random(in: 20...35)
+                heart.position = CGPoint(x: CGFloat.random(in: centerX - 100...centerX + 100), y: centerY - 50)
+                heart.zPosition = 200
+                addChild(heart)
+                let floatUp = SKAction.moveBy(x: CGFloat.random(in: -40...40), y: CGFloat.random(in: 150...250), duration: Double.random(in: 1.5...2.5))
+                heart.run(SKAction.sequence([
+                    SKAction.group([floatUp, SKAction.sequence([SKAction.wait(forDuration: 1.5), SKAction.fadeOut(withDuration: 0.5)])]),
+                    SKAction.removeFromParent()
+                ]))
+            }
+        case .stars:
+            for _ in 0..<20 {
+                let star = SKLabelNode(text: ["⭐️", "🌟", "✨", "💫"].randomElement()!)
+                star.fontSize = CGFloat.random(in: 15...30)
+                star.position = CGPoint(x: centerX, y: centerY)
+                star.zPosition = 200
+                star.alpha = 0
+                addChild(star)
+                let angle = CGFloat.random(in: 0...(.pi * 2))
+                let dist = CGFloat.random(in: 60...180)
+                let dest = CGPoint(x: centerX + cos(angle) * dist, y: centerY + sin(angle) * dist)
+                star.run(SKAction.sequence([
+                    SKAction.group([
+                        SKAction.move(to: dest, duration: 0.8),
+                        SKAction.fadeIn(withDuration: 0.2),
+                        SKAction.sequence([SKAction.wait(forDuration: 0.5), SKAction.fadeOut(withDuration: 0.3)]),
+                        SKAction.rotate(byAngle: .pi, duration: 0.8)
+                    ]),
+                    SKAction.removeFromParent()
+                ]))
+            }
+        case .bubbles:
+            for _ in 0..<18 {
+                let bubble = SKShapeNode(circleOfRadius: CGFloat.random(in: 8...20))
+                bubble.fillColor = .white.withAlphaComponent(0.4)
+                bubble.strokeColor = .white.withAlphaComponent(0.7)
+                bubble.lineWidth = 2
+                bubble.position = CGPoint(x: CGFloat.random(in: 50...frame.width - 50), y: -20)
+                bubble.zPosition = 200
+                addChild(bubble)
+                let floatUp = SKAction.moveBy(x: CGFloat.random(in: -30...30), y: frame.height + 50, duration: Double.random(in: 2.0...4.0))
+                bubble.run(SKAction.sequence([floatUp, SKAction.removeFromParent()]))
+            }
+        case .lightning:
+            for _ in 0..<8 {
+                let bolt = SKLabelNode(text: "⚡️")
+                bolt.fontSize = CGFloat.random(in: 30...50)
+                bolt.position = CGPoint(x: CGFloat.random(in: 50...frame.width - 50), y: frame.height + 20)
+                bolt.zPosition = 200
+                bolt.alpha = 0
+                addChild(bolt)
+                let flash = SKAction.sequence([
+                    SKAction.fadeIn(withDuration: 0.05),
+                    SKAction.moveBy(x: CGFloat.random(in: -20...20), y: -frame.height - 50, duration: 0.3),
+                    SKAction.fadeOut(withDuration: 0.1),
+                    SKAction.removeFromParent()
+                ])
+                bolt.run(SKAction.sequence([SKAction.wait(forDuration: Double.random(in: 0...0.5)), flash]))
+            }
+            // Screen flash
+            let flash = SKShapeNode(rectOf: self.size)
+            flash.fillColor = .white
+            flash.strokeColor = .clear
+            flash.position = CGPoint(x: frame.midX, y: frame.midY)
+            flash.zPosition = 199
+            flash.alpha = 0
+            addChild(flash)
+            flash.run(SKAction.sequence([
+                SKAction.fadeAlpha(to: 0.3, duration: 0.05),
+                SKAction.fadeOut(withDuration: 0.2),
+                SKAction.removeFromParent()
+            ]))
+        case .none:
+            break
+        }
+    }
     
     private func restartGame() { lives = 3; level = 1; currentScore = 0; comboCount = 0; removeAllChildren(); updateEnvironment(); setupStage(); setupBaseUI(); setupOverlays(); startNewRound() }
     private func transitionToMenu() { let menuScene = MenuScene(size: self.size); menuScene.scaleMode = .aspectFill; let transition = SKTransition.doorsCloseHorizontal(withDuration: 0.8); self.view?.presentScene(menuScene, transition: transition) }
