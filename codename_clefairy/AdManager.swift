@@ -10,10 +10,9 @@ class AdManager: NSObject, BannerViewDelegate, FullScreenContentDelegate {
     
     private var interstitial: InterstitialAd?
     
-    // AdMob Test IDs - Use for development and testing only.
-    // Replace with production IDs for Release builds.
-    private let bannerAdUnitID = "ca-app-pub-3940256099942544/2934735716"
-    private let interstitialAdUnitID = "ca-app-pub-3940256099942544/4411468910"
+    // Production AdMob IDs - Use for Release builds.
+    private let bannerAdUnitID = "ca-app-pub-6811490856416526/1065534537"
+    private let interstitialAdUnitID = "ca-app-pub-6811490856416526/9152085723"
     
     private var bannerView: BannerView?
     

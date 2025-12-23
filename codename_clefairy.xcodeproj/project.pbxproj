@@ -265,6 +265,7 @@
 				DEVELOPMENT_TEAM = SYGB8AL676;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_FILE = "codename-clefairy-Info.plist";
+				INFOPLIST_KEY_CFBundleDisplayName = Memorandum;
 				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
 				INFOPLIST_KEY_UILaunchStoryboardName = LaunchScreen;
 				INFOPLIST_KEY_UIMainStoryboardFile = Main;
@@ -302,6 +303,7 @@
 				DEVELOPMENT_TEAM = SYGB8AL676;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_FILE = "codename-clefairy-Info.plist";
+				INFOPLIST_KEY_CFBundleDisplayName = Memorandum;
 				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
 				INFOPLIST_KEY_UILaunchStoryboardName = LaunchScreen;
 				INFOPLIST_KEY_UIMainStoryboardFile = Main;
