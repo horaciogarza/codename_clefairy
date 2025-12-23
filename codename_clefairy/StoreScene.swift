@@ -125,15 +125,26 @@ class StoreScene: SKScene {
 
     // MARK: - Tab Setup
     private func setupTabs() {
-        let safeTop = view?.safeAreaInsets.top ?? 50
-        let tabY = frame.maxY - safeTop - 90
+        let safeBottom = view?.safeAreaInsets.bottom ?? 20
+        let tabBarHeight: CGFloat = 80
+        let tabY = safeBottom + tabBarHeight/2 - 10
+        
+        // Tab Bar Background
+        let tabBarBg = SKShapeNode(rectOf: CGSize(width: frame.width, height: tabBarHeight + safeBottom))
+        tabBarBg.fillColor = .white
+        tabBarBg.strokeColor = SKColor(red: 0.9, green: 0.9, blue: 0.95, alpha: 1.0)
+        tabBarBg.lineWidth = 1
+        tabBarBg.position = CGPoint(x: frame.midX, y: (tabBarHeight + safeBottom)/2 - safeBottom/2)
+        tabBarBg.zPosition = 100
+        addChild(tabBarBg)
 
         let categories = StoreCategory.allCases
-        let tabWidth: CGFloat = (frame.width - 40) / CGFloat(categories.count)
+        let tabWidth: CGFloat = frame.width / CGFloat(categories.count)
 
         for (index, category) in categories.enumerated() {
-            let tabBtn = createTabButton(category: category, width: tabWidth - 8)
-            tabBtn.position = CGPoint(x: 25 + tabWidth * CGFloat(index) + tabWidth/2, y: tabY)
+            let tabBtn = createTabButton(category: category, width: tabWidth)
+            tabBtn.position = CGPoint(x: tabWidth * CGFloat(index) + tabWidth/2, y: tabY)
+            tabBtn.zPosition = 101
             tabBtn.name = "tab_\(category.rawValue)"
             addChild(tabBtn)
             tabButtons[category] = tabBtn
@@ -144,41 +155,66 @@ class StoreScene: SKScene {
 
     private func createTabButton(category: StoreCategory, width: CGFloat) -> SKNode {
         let container = SKNode()
-
-        let bg = SKShapeNode(rectOf: CGSize(width: width, height: 50), cornerRadius: 15)
-        bg.fillColor = .white.withAlphaComponent(0.9)
-        bg.strokeColor = SKColor(red: 0.7, green: 0.5, blue: 0.9, alpha: 0.5)
-        bg.lineWidth = 2
-        bg.name = "tab_bg"
+        
+        // Touch area
+        let bg = SKShapeNode(rectOf: CGSize(width: width, height: 60))
+        bg.fillColor = .clear
+        bg.strokeColor = .clear
+        bg.name = "internal_bg" // Used for touch detection
         container.addChild(bg)
 
-        let icon = SKLabelNode(text: category.icon)
-        icon.fontSize = 20
-        icon.position = CGPoint(x: 0, y: 5)
-        container.addChild(icon)
+        // Icon using SF Symbols
+        let iconName = getIconName(for: category)
+        if let image = UIImage(systemName: iconName)?.withRenderingMode(.alwaysTemplate) {
+            let texture = SKTexture(image: image)
+            let sprite = SKSpriteNode(texture: texture)
+            sprite.size = CGSize(width: 28, height: 26)
+            sprite.color = .lightGray
+            sprite.colorBlendFactor = 1.0
+            sprite.name = "internal_icon"
+            sprite.position = CGPoint(x: 0, y: 5)
+            container.addChild(sprite)
+        }
 
         let label = SKLabelNode(fontNamed: "Gameplay")
         label.text = category.rawValue
         label.fontSize = 10
-        label.fontColor = .darkGray
+        label.fontColor = .lightGray
         label.position = CGPoint(x: 0, y: -15)
+        label.name = "internal_label"
         container.addChild(label)
 
         return container
     }
+    
+    private func getIconName(for category: StoreCategory) -> String {
+        switch category {
+        case .skins: return "paintpalette.fill"
+        case .themes: return "photo.fill"
+        case .emojis: return "face.smiling.fill"
+        case .effects: return "sparkles"
+        case .powerups: return "bolt.fill"
+        }
+    }
 
     private func updateTabSelection() {
         for (category, node) in tabButtons {
-            if let bg = node.childNode(withName: "tab_bg") as? SKShapeNode {
-                if category == currentCategory {
-                    bg.fillColor = SKColor(red: 0.7, green: 0.5, blue: 0.9, alpha: 1.0)
-                    bg.strokeColor = SKColor(red: 0.5, green: 0.3, blue: 0.8, alpha: 1.0)
-                    bg.lineWidth = 3
-                } else {
-                    bg.fillColor = .white.withAlphaComponent(0.9)
-                    bg.strokeColor = SKColor(red: 0.7, green: 0.5, blue: 0.9, alpha: 0.5)
-                    bg.lineWidth = 2
+            let isSelected = (category == currentCategory)
+            let color: SKColor = isSelected ? SKColor(red: 0.4, green: 0.2, blue: 0.6, alpha: 1.0) : .lightGray
+            
+            if let icon = node.childNode(withName: "internal_icon") as? SKSpriteNode {
+                icon.color = color
+                // Pop animation for selected
+                if isSelected {
+                    icon.run(SKAction.sequence([
+                        SKAction.scale(to: 1.2, duration: 0.1),
+                        SKAction.scale(to: 1.0, duration: 0.1)
+                    ]))
                 }
+            }
+            
+            if let label = node.childNode(withName: "internal_label") as? SKLabelNode {
+                label.fontColor = color
             }
         }
     }
@@ -186,7 +222,8 @@ class StoreScene: SKScene {
     // MARK: - Filter Setup
     private func setupFilters() {
         let safeTop = view?.safeAreaInsets.top ?? 50
-        let filterY = frame.maxY - safeTop - 145
+        // Moved higher since tabs are at bottom
+        let filterY = frame.maxY - safeTop - 90
 
         let filters = StoreFilter.allCases
         let filterWidth: CGFloat = 75
@@ -242,8 +279,10 @@ class StoreScene: SKScene {
     private func setupContentArea() {
         let safeTop = view?.safeAreaInsets.top ?? 50
         let safeBottom = view?.safeAreaInsets.bottom ?? 0
-        let contentTop = frame.maxY - safeTop - 175
-        let contentBottom = safeBottom + 20
+        let tabBarHeight: CGFloat = 80
+        
+        let contentTop = frame.maxY - safeTop - 120
+        let contentBottom = safeBottom + tabBarHeight + 10
 
         // Content container with clipping
         contentNode = SKNode()
@@ -272,7 +311,11 @@ class StoreScene: SKScene {
 
         let safeTop = view?.safeAreaInsets.top ?? 50
         let safeBottom = view?.safeAreaInsets.bottom ?? 0
-        let contentHeight = frame.maxY - safeTop - 175 - safeBottom - 20
+        let tabBarHeight: CGFloat = 80
+        
+        let contentTop = frame.maxY - safeTop - 120
+        let contentBottom = safeBottom + tabBarHeight + 10
+        let contentHeight = contentTop - contentBottom
 
         // Reset scroll position
         scrollContentNode?.position.y = contentHeight / 2

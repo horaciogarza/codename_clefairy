@@ -134,9 +134,10 @@ class MenuScene: SKScene {
     func setupUI() {
         let safeTop = view?.safeAreaInsets.top ?? 50
         
-        // --- Info Button (Top Left) ---
+        // --- Info Button (Bottom Left) ---
         let infoBtn = createIconBtn(text: "?", color: .systemPink)
-        infoBtn.position = CGPoint(x: 50, y: frame.maxY - safeTop - 30)
+        let safeBottom = view?.safeAreaInsets.bottom ?? 20
+        infoBtn.position = CGPoint(x: 50, y: safeBottom + 50)
         infoBtn.name = "info"
         addChild(infoBtn)
         
@@ -212,7 +213,7 @@ class MenuScene: SKScene {
         board.addChild(subText)
         
         // --- Play Button ---
-        let playBtn = createCartoonButton(text: "PLAY!", color: .systemGreen, size: CGSize(width: frame.width * 0.7, height: 100))
+        let playBtn = createCartoonButton(text: "PLAY!", color: .systemGreen, size: CGSize(width: frame.width * 0.7, height: 90))
         playBtn.position = CGPoint(x: frame.midX, y: frame.midY - (frame.height * 0.15))
         playBtn.name = "play"
         addChild(playBtn)
