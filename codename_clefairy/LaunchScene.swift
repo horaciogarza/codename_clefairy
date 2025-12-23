@@ -1,12 +1,42 @@
 import SpriteKit
 
 class LaunchScene: SKScene {
-    
+
+    private var canSkip = false
+    private var skipLabel: SKLabelNode?
+
     override func didMove(to view: SKView) {
         // Soft pastel gradient-like background
         backgroundColor = SKColor(red: 1.00, green: 0.49, blue: 0.73, alpha: 1.0) // Vibrant Pink
         setupDecorations()
+        setupSkipHint()
         setupAnimation()
+    }
+
+    private func setupSkipHint() {
+        let safeBottom = view?.safeAreaInsets.bottom ?? 0
+
+        skipLabel = SKLabelNode(fontNamed: "Gameplay")
+        skipLabel?.text = "TAP TO SKIP"
+        skipLabel?.fontSize = 16
+        skipLabel?.fontColor = .white.withAlphaComponent(0.6)
+        skipLabel?.position = CGPoint(x: frame.midX, y: safeBottom + 80)
+        skipLabel?.alpha = 0
+        addChild(skipLabel!)
+
+        // Show skip hint after a brief delay
+        run(SKAction.wait(forDuration: 1.0)) { [weak self] in
+            self?.canSkip = true
+            self?.skipLabel?.run(SKAction.fadeIn(withDuration: 0.3))
+        }
+    }
+
+    override func touchesBegan(_ touches: Set<UITouch>, with event: UIEvent?) {
+        if canSkip {
+            removeAllActions()
+            children.forEach { $0.removeAllActions() }
+            transitionToMenu()
+        }
     }
     
     private func setupDecorations() {
@@ -108,20 +138,31 @@ class LaunchScene: SKScene {
         titleContainer.setScale(0)
         addChild(titleContainer)
         
-        // Cartoon style title with "Shadow"
-        let titleShadow = SKLabelNode(fontNamed: "Gameplay")
-        titleShadow.text = "CODENAME CLEFAIRY"
-        titleShadow.fontSize = frame.width * 0.085
-        titleShadow.fontColor = SKColor(red: 0.17, green: 0.18, blue: 0.26, alpha: 1.0)
-        titleShadow.position = CGPoint(x: 2, y: -2)
-        titleContainer.addChild(titleShadow)
-        
-        let titleMain = SKLabelNode(fontNamed: "Gameplay")
-        titleMain.text = "CODENAME CLEFAIRY"
-        titleMain.fontSize = frame.width * 0.085
-        titleMain.fontColor = .white
-        titleMain.position = .zero
-        titleContainer.addChild(titleMain)
+        // Cartoon style title with "Shadow" - Rainbow MEMORANDUM
+        let titleText = "MEMORANDUM"
+        let colors: [SKColor] = [.red, .orange, .yellow, .green, .cyan, .blue, .purple, .magenta, .red, .orange]
+        let charSize: CGFloat = frame.width * 0.09
+        let spacing: CGFloat = charSize * 0.75
+        var xOffset: CGFloat = -(CGFloat(titleText.count - 1) * spacing) / 2
+
+        for (i, char) in titleText.enumerated() {
+            let charShadow = SKLabelNode(fontNamed: "Gameplay")
+            charShadow.text = String(char)
+            charShadow.fontSize = charSize
+            charShadow.fontColor = SKColor(red: 0.17, green: 0.18, blue: 0.26, alpha: 1.0)
+            charShadow.position = CGPoint(x: xOffset + 3, y: -3)
+            charShadow.zPosition = -1
+            titleContainer.addChild(charShadow)
+
+            let charNode = SKLabelNode(fontNamed: "Gameplay")
+            charNode.text = String(char)
+            charNode.fontSize = charSize
+            charNode.fontColor = colors[i % colors.count]
+            charNode.position = CGPoint(x: xOffset, y: 0)
+            titleContainer.addChild(charNode)
+
+            xOffset += spacing
+        }
         
         let appear = SKAction.group([
             SKAction.fadeIn(withDuration: 0.6),

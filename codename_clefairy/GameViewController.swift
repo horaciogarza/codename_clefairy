@@ -24,8 +24,13 @@ class GameViewController: UIViewController {
                 view.presentScene(scene)
                 
                 view.ignoresSiblingOrder = true
-                view.showsFPS = true
-                view.showsNodeCount = true
+                view.showsFPS = false
+                view.showsNodeCount = false
+                
+                // Setup AdMob Banner
+                Task { @MainActor in
+                    AdManager.shared.setupBanner(in: self)
+                }
             }
             sceneInitialized = true
         }
