@@ -127,23 +127,38 @@ class StoreScene: SKScene {
     private func setupTabs() {
         let safeBottom = view?.safeAreaInsets.bottom ?? 20
         let tabBarHeight: CGFloat = 80
-        let tabY = safeBottom + tabBarHeight/2 - 10
+        // Move slightly up for floating effect
+        let tabY = safeBottom + tabBarHeight/2 + 5
         
-        // Tab Bar Background
-        let tabBarBg = SKShapeNode(rectOf: CGSize(width: frame.width, height: tabBarHeight + safeBottom))
-        tabBarBg.fillColor = .white
-        tabBarBg.strokeColor = SKColor(red: 0.9, green: 0.9, blue: 0.95, alpha: 1.0)
-        tabBarBg.lineWidth = 1
-        tabBarBg.position = CGPoint(x: frame.midX, y: (tabBarHeight + safeBottom)/2 - safeBottom/2)
+        // Liquid Glass Tab Bar Background (Floating Pill)
+        let barWidth = frame.width * 0.92
+        let tabBarBg = SKShapeNode(rectOf: CGSize(width: barWidth, height: tabBarHeight), cornerRadius: 40)
+        
+        // Glass Effect: Red tint, low alpha
+        tabBarBg.fillColor = SKColor.systemRed.withAlphaComponent(0.15)
+        tabBarBg.strokeColor = SKColor.white.withAlphaComponent(0.4)
+        tabBarBg.lineWidth = 1.5
+        
+        // Add a subtle glow/shadow
+        let shadow = SKShapeNode(rectOf: CGSize(width: barWidth, height: tabBarHeight), cornerRadius: 40)
+        shadow.fillColor = .clear
+        shadow.strokeColor = SKColor.systemRed.withAlphaComponent(0.3)
+        shadow.lineWidth = 4
+        shadow.glowWidth = 6
+        shadow.position = .zero
+        tabBarBg.addChild(shadow)
+        
+        tabBarBg.position = CGPoint(x: frame.midX, y: tabY)
         tabBarBg.zPosition = 100
         addChild(tabBarBg)
 
         let categories = StoreCategory.allCases
-        let tabWidth: CGFloat = frame.width / CGFloat(categories.count)
+        let tabWidth: CGFloat = barWidth / CGFloat(categories.count)
+        let startX = frame.midX - barWidth/2 + tabWidth/2
 
         for (index, category) in categories.enumerated() {
             let tabBtn = createTabButton(category: category, width: tabWidth)
-            tabBtn.position = CGPoint(x: tabWidth * CGFloat(index) + tabWidth/2, y: tabY)
+            tabBtn.position = CGPoint(x: startX + tabWidth * CGFloat(index), y: tabY)
             tabBtn.zPosition = 101
             tabBtn.name = "tab_\(category.rawValue)"
             addChild(tabBtn)
@@ -169,20 +184,28 @@ class StoreScene: SKScene {
             let texture = SKTexture(image: image)
             let sprite = SKSpriteNode(texture: texture)
             sprite.size = CGSize(width: 28, height: 26)
-            sprite.color = .lightGray
+            sprite.color = .white
             sprite.colorBlendFactor = 1.0
             sprite.name = "internal_icon"
-            sprite.position = CGPoint(x: 0, y: 5)
+            sprite.position = CGPoint(x: 0, y: 0) // Centered if no label, or shift up
             container.addChild(sprite)
         }
 
+        // Removed label for cleaner "liquid" look, or keep it very small/subtle? 
+        // Let's keep it but very small and clean.
         let label = SKLabelNode(fontNamed: "Gameplay")
         label.text = category.rawValue
-        label.fontSize = 10
-        label.fontColor = .lightGray
-        label.position = CGPoint(x: 0, y: -15)
+        label.fontSize = 9
+        label.fontColor = .white
+        label.position = CGPoint(x: 0, y: -20)
         label.name = "internal_label"
+        label.alpha = 0.7
         container.addChild(label)
+        
+        // Adjust icon position to make room for label
+        if let icon = container.childNode(withName: "internal_icon") {
+            icon.position = CGPoint(x: 0, y: 5)
+        }
 
         return container
     }
@@ -200,21 +223,43 @@ class StoreScene: SKScene {
     private func updateTabSelection() {
         for (category, node) in tabButtons {
             let isSelected = (category == currentCategory)
-            let color: SKColor = isSelected ? SKColor(red: 0.4, green: 0.2, blue: 0.6, alpha: 1.0) : .lightGray
+            
+            // Active: Bright Red/White hybrid. Inactive: Muted Red/Gray.
+            let activeColor = SKColor.systemRed
+            let inactiveColor = SKColor.systemRed.withAlphaComponent(0.4)
             
             if let icon = node.childNode(withName: "internal_icon") as? SKSpriteNode {
-                icon.color = color
+                icon.color = isSelected ? activeColor : inactiveColor
+                
                 // Pop animation for selected
                 if isSelected {
+                    // Reset scale first
+                    icon.setScale(1.0)
                     icon.run(SKAction.sequence([
-                        SKAction.scale(to: 1.2, duration: 0.1),
+                        SKAction.scale(to: 1.3, duration: 0.15),
                         SKAction.scale(to: 1.0, duration: 0.1)
                     ]))
+                    
+                    // Add a subtle glow behind active icon
+                    if node.childNode(withName: "active_glow") == nil {
+                        let glow = SKShapeNode(circleOfRadius: 20)
+                        glow.fillColor = SKColor.white.withAlphaComponent(0.3)
+                        glow.strokeColor = .clear
+                        glow.name = "active_glow"
+                        glow.zPosition = -1
+                        node.addChild(glow)
+                        glow.run(SKAction.sequence([
+                            SKAction.scale(to: 1.2, duration: 0.2),
+                            SKAction.fadeOut(withDuration: 0.2),
+                            SKAction.removeFromParent()
+                        ]))
+                    }
                 }
             }
             
             if let label = node.childNode(withName: "internal_label") as? SKLabelNode {
-                label.fontColor = color
+                label.fontColor = isSelected ? activeColor : inactiveColor
+                label.alpha = isSelected ? 1.0 : 0.6
             }
         }
     }

@@ -474,7 +474,8 @@ class GameScene: SKScene {
     
     // MARK: - UI & Input Setup
     private func setupOverlays() {
-        let cornerRadius: CGFloat = (view?.safeAreaInsets.bottom ?? 0) > 0 ? 44 : 0
+        // Modern iPhone corner radius approximation (iPhone 16/17 etc)
+        let cornerRadius: CGFloat = 55.0 
         timerOverlay = SKShapeNode(path: UIBezierPath(roundedRect: frame, cornerRadius: cornerRadius).cgPath)
         timerOverlay?.position = .zero
         timerOverlay?.fillColor = .clear
