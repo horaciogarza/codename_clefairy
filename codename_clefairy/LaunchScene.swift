@@ -20,7 +20,7 @@ class LaunchScene: SKScene {
         skipLabel?.text = "TAP TO SKIP"
         skipLabel?.fontSize = 16
         skipLabel?.fontColor = .white.withAlphaComponent(0.6)
-        skipLabel?.position = CGPoint(x: frame.midX, y: safeBottom + 40)
+        skipLabel?.position = CGPoint(x: frame.midX, y: safeBottom + 80)
         skipLabel?.alpha = 0
         addChild(skipLabel!)
 

@@ -4,70 +4,19 @@ class MenuScene: SKScene {
     
     private let hapticFeedback = UIImpactFeedbackGenerator(style: .medium)
     private let notificationFeedback = UINotificationFeedbackGenerator()
-    private var shopLabel: SKLabelNode? // Reference to update coin count
     
     override func didMove(to view: SKView) {
-        backgroundColor = SKColor(red: 0.25, green: 0.75, blue: 1.00, alpha: 1.0)
+        backgroundColor = SKColor(red: 0.25, green: 0.75, blue: 1.00, alpha: 1.0) // Dark Navy Blue 0x0A0E14
         setupBackground()
         setupUI()
-        updateShopButton()
-    }
-    
-    private func updateShopButton() {
-        shopLabel?.text = "SHOP 💰 \(GameManager.shared.totalCoins)"
+        
+        Task { @MainActor in
+            AdManager.shared.showBanner()
+        }
     }
     
     private func setupBackground() {
-        // 1. Sun with a face
-        let sun = SKShapeNode(circleOfRadius: 60)
-        sun.fillColor = .yellow
-        sun.strokeColor = .orange
-        sun.lineWidth = 4
-        sun.position = CGPoint(x: frame.maxX - 80, y: frame.maxY - 80)
-        sun.zPosition = -5
-        addChild(sun)
-        
-        // Sun rays
-        for i in 0..<8 {
-            let ray = SKShapeNode(rectOf: CGSize(width: 20, height: 8))
-            ray.fillColor = .yellow
-            ray.strokeColor = .clear
-            ray.position = CGPoint(x: 80, y: 0)
-            ray.zRotation = CGFloat(i) * (.pi / 4)
-            
-            let rayContainer = SKNode()
-            rayContainer.position = .zero
-            rayContainer.addChild(ray)
-            rayContainer.zRotation = CGFloat(i) * (.pi / 4)
-            sun.addChild(rayContainer)
-        }
-        
-        // Sun Face
-        let leftEye = SKShapeNode(circleOfRadius: 6)
-        leftEye.fillColor = .black
-        leftEye.position = CGPoint(x: -20, y: 10)
-        sun.addChild(leftEye)
-        
-        let rightEye = SKShapeNode(circleOfRadius: 6)
-        rightEye.fillColor = .black
-        rightEye.position = CGPoint(x: 20, y: 10)
-        sun.addChild(rightEye)
-        
-        let smile = SKShapeNode()
-        let path = UIBezierPath()
-        path.move(to: CGPoint(x: -20, y: -15))
-        path.addQuadCurve(to: CGPoint(x: 20, y: -15), controlPoint: CGPoint(x: 0, y: -35))
-        smile.path = path.cgPath
-        smile.strokeColor = .black
-        smile.lineWidth = 4
-        smile.lineCap = .round
-        sun.addChild(smile)
-        
-        // Animate Sun
-        let rotate = SKAction.rotate(byAngle: .pi, duration: 10)
-        sun.run(SKAction.repeatForever(rotate))
-        
-        // 2. Hills
+        // 1. Hills
         let hill1 = SKShapeNode()
         let path1 = UIBezierPath()
         path1.move(to: CGPoint(x: 0, y: 0))
@@ -94,7 +43,7 @@ class MenuScene: SKScene {
         hill2.zPosition = -3
         addChild(hill2)
         
-        // 3. Pixeled Clouds
+        // 2. Pixeled Clouds
         for _ in 0..<5 {
             spawnCloud()
         }
@@ -132,29 +81,27 @@ class MenuScene: SKScene {
     }
     
     func setupUI() {
-        let safeTop = view?.safeAreaInsets.top ?? 50
+        let shiftY = size.height * 0.05
         
-        // --- Info Button (Bottom Left) ---
-        let infoBtn = createIconBtn(text: "?", color: .systemPink)
+        // --- How To Play Button (Bottom Left) ---
+        let infoBtn = createCartoonButton(text: "HOW TO PLAY", color: .systemPink, size: CGSize(width: 180, height: 50))
         let safeBottom = view?.safeAreaInsets.bottom ?? 20
-        infoBtn.position = CGPoint(x: 50, y: safeBottom + 50)
+        infoBtn.position = CGPoint(x: 110, y: safeBottom + 50 + shiftY)
         infoBtn.name = "info"
         addChild(infoBtn)
-        
-        // --- Cheat Coin Button (Top Right) ---
-        let cheatBtn = SKLabelNode(fontNamed: "Gameplay")
-        cheatBtn.text = "[+100💰]"
-        cheatBtn.fontSize = 20
-        cheatBtn.fontColor = .systemGreen
-        cheatBtn.position = CGPoint(x: frame.maxX - 60, y: frame.maxY - safeTop - 30)
-        cheatBtn.name = "cheat_coin"
-        cheatBtn.zPosition = 100
-        addChild(cheatBtn)
         
         // --- Title ---
         let titleNode = SKNode()
         titleNode.position = CGPoint(x: frame.midX, y: frame.midY + (frame.height * 0.3))
         addChild(titleNode)
+        
+        // --- High Score Display ---
+        let highScoreLabel = SKLabelNode(fontNamed: "Gameplay")
+        highScoreLabel.text = "BEST: \(GameManager.shared.highScore)"
+        highScoreLabel.fontSize = 20
+        highScoreLabel.fontColor = .white
+        highScoreLabel.position = CGPoint(x: frame.midX, y: titleNode.position.y - 60)
+        addChild(highScoreLabel)
         
         let titleText = "MEMORANDUM"
         let colors: [SKColor] = [.red, .orange, .yellow, .green, .blue, .purple]
@@ -191,56 +138,38 @@ class MenuScene: SKScene {
             xOffset += spacing
         }
         
-        // --- Main Board ---
-        let board = createCartoonPanel(size: CGSize(width: frame.width * 0.85, height: frame.height * 0.25), color: SKColor(red: 0.9, green: 0.9, blue: 0.95, alpha: 1.0))
-        board.position = CGPoint(x: frame.midX, y: frame.midY + 40)
-        addChild(board)
+        // --- Play Classic Button ---
+        let playClassicBtn = createCartoonButton(text: "PLAY CLASSIC", color: .systemGreen, size: CGSize(width: frame.width * 0.7, height: 80))
+        playClassicBtn.position = CGPoint(x: frame.midX, y: frame.midY - (frame.height * 0.12) + shiftY)
+        playClassicBtn.name = "play_classic"
+        addChild(playClassicBtn)
         
-        let boardTitle = SKLabelNode(fontNamed: "Gameplay")
-        boardTitle.text = "DAILY CHALLENGE"
-        boardTitle.fontSize = 28
-        boardTitle.fontColor = .black
-        boardTitle.position = CGPoint(x: 0, y: 40)
-        boardTitle.zPosition = 2
-        board.addChild(boardTitle)
+        let classicPulse = SKAction.sequence([
+            SKAction.scale(to: 1.05, duration: 0.6),
+            SKAction.scale(to: 0.95, duration: 0.6)
+        ])
+        playClassicBtn.run(SKAction.repeatForever(classicPulse))
         
-        let subText = SKLabelNode(fontNamed: "Gameplay")
-        subText.text = "Can you beat it?"
-        subText.fontSize = 18
-        subText.fontColor = .darkGray
-        subText.position = CGPoint(x: 0, y: 0)
-        subText.zPosition = 2
-        board.addChild(subText)
+        // --- Play Zen Button ---
+        let playZenBtn = createCartoonButton(text: "PLAY ZEN", color: .systemBlue, size: CGSize(width: frame.width * 0.7, height: 70))
+        playZenBtn.position = CGPoint(x: frame.midX, y: playClassicBtn.position.y - 100)
+        playZenBtn.name = "play_zen"
+        addChild(playZenBtn)
         
-        // --- Play Button ---
-        let playBtn = createCartoonButton(text: "PLAY!", color: .systemGreen, size: CGSize(width: frame.width * 0.7, height: 90))
-        playBtn.position = CGPoint(x: frame.midX, y: frame.midY - (frame.height * 0.15))
-        playBtn.name = "play"
-        addChild(playBtn)
-        
-        let scaleUp = SKAction.scale(to: 1.05, duration: 0.6)
-        let scaleDown = SKAction.scale(to: 0.95, duration: 0.6)
-        playBtn.run(SKAction.repeatForever(SKAction.sequence([scaleUp, scaleDown])))
-        
-        // --- Shop Button ---
-        let shopBtn = createCartoonButton(text: "SHOP", color: .systemPurple, size: CGSize(width: frame.width * 0.7, height: 70))
-        shopBtn.position = CGPoint(x: frame.midX, y: playBtn.position.y - 100)
-        shopBtn.name = "shop"
-        addChild(shopBtn)
-        
-        // Capture reference to label for updates
-        if let label = shopBtn.children.first(where: { ($0 as? SKLabelNode)?.name == "btn_label" }) as? SKLabelNode {
-            shopLabel = label
-        } else if let label = shopBtn.children.first(where: { $0 is SKLabelNode }) as? SKLabelNode {
-            // Fallback if not named
-            shopLabel = label
-        }
-        
-        // Check for first launch
+        // Check for first launch - PRESENT ONBOARDING
         if !UserDefaults.standard.bool(forKey: "HasLaunchedBefore") {
-            showIntroPopup()
             UserDefaults.standard.set(true, forKey: "HasLaunchedBefore")
+            run(SKAction.wait(forDuration: 0.1)) { [weak self] in
+                self?.transitionToOnboarding()
+            }
         }
+    }
+    
+    private func transitionToOnboarding() {
+        let onboarding = OnboardingScene(size: self.size)
+        onboarding.scaleMode = .aspectFill
+        let transition = SKTransition.moveIn(with: .up, duration: 0.5)
+        view?.presentScene(onboarding, transition: transition)
     }
     
     // --- Popup & Button Helpers ---
@@ -363,26 +292,11 @@ class MenuScene: SKScene {
         }
     }
     
-    private func transitionToStore() {
-        let storeScene = StoreScene(size: self.size)
-        storeScene.scaleMode = .aspectFill
-        let transition = SKTransition.push(with: .left, duration: 0.4)
-        self.view?.presentScene(storeScene, transition: transition)
-    }
-    
     override func touchesBegan(_ touches: Set<UITouch>, with event: UIEvent?) {
         guard let touch = touches.first else { return }
         let location = touch.location(in: self)
         let nodes = self.nodes(at: location)
         
-        // Handle Cheat
-        if let _ = nodes.first(where: { $0.name == "cheat_coin" }) {
-            GameManager.shared.totalCoins += 100
-            hapticFeedback.impactOccurred()
-            updateShopButton()
-            return
-        }
-
         // Handle Popups
         if let overlay = childNode(withName: "popup_overlay") {
             overlay.removeFromParent()
@@ -394,20 +308,26 @@ class MenuScene: SKScene {
             let parent = (node.name == "btn_body") ? node.parent : node
             let nodeName = parent?.name ?? node.name
             
-            if nodeName == "play" {
+            // Tactile feedback
+            let feedbackTarget = parent ?? node
+            feedbackTarget.run(SKAction.scale(to: 0.9, duration: 0.1))
+            
+            if nodeName == "play_classic" {
                 animateTap(parent ?? node) {
                     self.hapticFeedback.impactOccurred()
+                    GameManager.shared.currentMode = .classic
                     self.transitionToGame()
                 }
-            } else if nodeName == "shop" {
+            } else if nodeName == "play_zen" {
                 animateTap(parent ?? node) {
                     self.hapticFeedback.impactOccurred()
-                    self.transitionToStore()
+                    GameManager.shared.currentMode = .zen
+                    self.transitionToGame()
                 }
             } else if nodeName == "info" {
                 animateTap(parent ?? node) {
                     self.hapticFeedback.impactOccurred()
-                    self.showIntroPopup()
+                    self.transitionToOnboarding()
                 }
             }
         }
