@@ -3,11 +3,17 @@ import SpriteKit
 class MenuScene: SKScene {
     
     private let hapticFeedback = UIImpactFeedbackGenerator(style: .medium)
+    private let notificationFeedback = UINotificationFeedbackGenerator()
+    private let coinLabel = SKLabelNode(fontNamed: "Gameplay")
     
     override func didMove(to view: SKView) {
         backgroundColor = SKColor(red: 0.25, green: 0.75, blue: 1.00, alpha: 1.0) // Brighter Sky Blue
         setupBackground()
         setupUI()
+    }
+    
+    private func updateCoinDisplay() {
+        coinLabel.text = "💰 \(GameManager.shared.totalCoins)"
     }
     
     private func setupBackground() {
@@ -131,14 +137,12 @@ class MenuScene: SKScene {
         let barHeight: CGFloat = 80
         let barY = frame.maxY - safeTop - (barHeight / 2)
         
-        // Bar Background (Translucent "Glass/Cloud" Effect)
         let topBar = SKShapeNode(rectOf: CGSize(width: frame.width - 40, height: barHeight), cornerRadius: 25)
         topBar.fillColor = .white.withAlphaComponent(0.85)
         topBar.strokeColor = .clear
         topBar.position = CGPoint(x: frame.midX, y: barY)
         topBar.zPosition = 10
         
-        // Shadow for Bar
         let barShadow = SKShapeNode(rectOf: CGSize(width: frame.width - 40, height: barHeight), cornerRadius: 25)
         barShadow.fillColor = .black.withAlphaComponent(0.2)
         barShadow.strokeColor = .clear
@@ -148,40 +152,35 @@ class MenuScene: SKScene {
         
         addChild(topBar)
         
-        // --- Buttons & Score in Top Bar ---
-        
         // Info Button (Left)
         let infoBtn = createIconBtn(text: "?", color: .systemPink)
         infoBtn.position = CGPoint(x: -(topBar.frame.width/2) + 50, y: 0)
         infoBtn.name = "info"
         topBar.addChild(infoBtn)
         
-        // Settings Button (Right)
-        let settingsBtn = createIconBtn(text: "⚙", color: .systemBlue)
+        // Settings Button (Right) - Updated to Settings
+        let settingsBtn = createIconBtn(text: "⚙", color: .systemGray)
         settingsBtn.position = CGPoint(x: (topBar.frame.width/2) - 50, y: 0)
         settingsBtn.name = "settings"
         topBar.addChild(settingsBtn)
         
         // Score (Center)
-        let scoreLabel = SKLabelNode(fontNamed: "Gameplay")
-        scoreLabel.text = "BEST: 9999"
-        scoreLabel.fontSize = 28
-        scoreLabel.fontColor = .darkGray
-        scoreLabel.verticalAlignmentMode = .center
-        scoreLabel.position = CGPoint(x: 0, y: 0)
-        topBar.addChild(scoreLabel)
+        coinLabel.text = "💰 \(GameManager.shared.totalCoins)"
+        coinLabel.fontSize = 28
+        coinLabel.fontColor = .darkGray
+        coinLabel.verticalAlignmentMode = .center
+        coinLabel.position = CGPoint(x: 0, y: 0)
+        topBar.addChild(coinLabel)
         
         
         // --- Title (Smaller & Cleaner) ---
         let titleNode = SKNode()
-        // Positioned below the bar, slightly higher than before
         titleNode.position = CGPoint(x: frame.midX, y: barY - barHeight - 40)
         addChild(titleNode)
         
         let titleText = "MEMORANDUM"
         let colors: [SKColor] = [.red, .orange, .yellow, .green, .blue, .purple]
         
-        // Reduced font size and spacing
         let charSize: CGFloat = 38
         let spacing: CGFloat = 30
         var xOffset: CGFloat = -(CGFloat(titleText.count) * (spacing / 2))
@@ -193,7 +192,6 @@ class MenuScene: SKScene {
             charNode.fontColor = colors[i % colors.count]
             charNode.position = CGPoint(x: xOffset, y: 0)
             
-            // Stroke effect (shadow)
             let shadow = SKLabelNode(fontNamed: "Gameplay")
             shadow.text = String(char)
             shadow.fontSize = charSize
@@ -245,7 +243,12 @@ class MenuScene: SKScene {
         let scaleDown = SKAction.scale(to: 0.95, duration: 0.6)
         playBtn.run(SKAction.repeatForever(SKAction.sequence([scaleUp, scaleDown])))
         
-        // Check for first launch
+        // --- Shop Button (New Location) ---
+        let shopBtn = createCartoonButton(text: "ITEM SHOP", color: .systemPurple, size: CGSize(width: frame.width * 0.7, height: 70))
+        shopBtn.position = CGPoint(x: frame.midX, y: playBtn.position.y - 100) // Below Play Button
+        shopBtn.name = "shop"
+        addChild(shopBtn)
+        
         if !UserDefaults.standard.bool(forKey: "HasLaunchedBefore") {
             showIntroPopup()
             UserDefaults.standard.set(true, forKey: "HasLaunchedBefore")
@@ -256,25 +259,22 @@ class MenuScene: SKScene {
         let container = SKNode()
         let size: CGFloat = 50
         
-        // Shadow
         let shadow = SKShapeNode(circleOfRadius: size/2)
         shadow.fillColor = .black.withAlphaComponent(0.2)
         shadow.strokeColor = .clear
         shadow.position = CGPoint(x: 2, y: -2)
         container.addChild(shadow)
         
-        // Body
         let body = SKShapeNode(circleOfRadius: size/2)
         body.fillColor = color
         body.strokeColor = .white
         body.lineWidth = 3
-        body.name = "btn_body" // Detect taps here
+        body.name = "btn_body"
         container.addChild(body)
         
-        // Label
-        let label = SKLabelNode(fontNamed: "Gameplay")
+        let label = SKLabelNode(fontNamed: "AppleColorEmoji") // Better for emojis
         label.text = text
-        label.fontSize = 30
+        label.fontSize = 24
         label.fontColor = .white
         label.verticalAlignmentMode = .center
         label.zPosition = 1
@@ -329,6 +329,9 @@ class MenuScene: SKScene {
     }
     
     private func showIntroPopup() {
+        // Prevent double open
+        if childNode(withName: "popup_overlay") != nil { return }
+        
         let overlay = SKShapeNode(rectOf: self.size)
         overlay.fillColor = .black.withAlphaComponent(0.7)
         overlay.strokeColor = .clear
@@ -369,19 +372,136 @@ class MenuScene: SKScene {
         }
     }
     
+    private func showShopPopup() {
+        // Prevent double open
+        if childNode(withName: "shop_overlay") != nil { return }
+        
+        let overlay = SKShapeNode(rectOf: self.size)
+        overlay.fillColor = .black.withAlphaComponent(0.7)
+        overlay.strokeColor = .clear
+        overlay.position = CGPoint(x: frame.midX, y: frame.midY)
+        overlay.zPosition = 100
+        overlay.name = "shop_overlay"
+        addChild(overlay)
+        
+        let boardHeight = frame.height * 0.7
+        let board = createCartoonPanel(size: CGSize(width: frame.width * 0.9, height: boardHeight), color: .white)
+        board.position = .zero
+        overlay.addChild(board)
+        
+        let title = SKLabelNode(fontNamed: "Gameplay")
+        title.text = "ITEM SHOP"
+        title.fontSize = 32
+        title.fontColor = .black
+        title.position = CGPoint(x: 0, y: boardHeight/2 - 50)
+        title.zPosition = 10
+        board.addChild(title)
+        
+        // List Skins
+        let skins = ButtonSkin.allCases
+        let startY = boardHeight/2 - 120
+        let spacing: CGFloat = 80
+        
+        for (i, skin) in skins.enumerated() {
+            let row = SKNode()
+            row.position = CGPoint(x: 0, y: startY - CGFloat(i) * spacing)
+            board.addChild(row)
+            
+            // Preview Circle
+            let preview = SKShapeNode(circleOfRadius: 25)
+            preview.fillColor = skin.primaryColor
+            preview.strokeColor = skin.strokeColor
+            preview.lineWidth = 3
+            preview.position = CGPoint(x: -100, y: 0)
+            row.addChild(preview)
+            
+            // Name & Cost
+            let nameLabel = SKLabelNode(fontNamed: "Gameplay")
+            nameLabel.text = skin.rawValue
+            nameLabel.fontSize = 20
+            nameLabel.fontColor = .black
+            nameLabel.horizontalAlignmentMode = .left
+            nameLabel.position = CGPoint(x: -60, y: 5)
+            row.addChild(nameLabel)
+            
+            let costLabel = SKLabelNode(fontNamed: "Gameplay")
+            costLabel.fontSize = 16
+            costLabel.horizontalAlignmentMode = .left
+            costLabel.position = CGPoint(x: -60, y: -15)
+            row.addChild(costLabel)
+            
+            // Action Button
+            let isUnlocked = GameManager.shared.unlockedSkins.contains(skin)
+            let isSelected = GameManager.shared.selectedSkin == skin
+            
+            var btnColor: UIColor = .systemBlue
+            var btnText = "BUY"
+            
+            if isSelected {
+                btnColor = .systemGreen
+                btnText = "USED"
+            } else if isUnlocked {
+                btnColor = .systemBlue
+                btnText = "USE"
+            } else {
+                btnColor = .systemOrange
+                btnText = "\(skin.cost)"
+            }
+            
+            let btn = createCartoonButton(text: btnText, color: btnColor, size: CGSize(width: 100, height: 50))
+            btn.position = CGPoint(x: 100, y: 0)
+            btn.name = "skin_\(skin.rawValue)"
+            row.addChild(btn)
+            
+            if isUnlocked {
+                costLabel.text = "Owned"
+                costLabel.fontColor = .systemGreen
+            } else {
+                costLabel.text = "Price: \(skin.cost)"
+                costLabel.fontColor = .gray
+            }
+        }
+        
+        let closeLabel = SKLabelNode(fontNamed: "Gameplay")
+        closeLabel.text = "TAP OUTSIDE TO CLOSE"
+        closeLabel.fontSize = 16
+        closeLabel.fontColor = .gray
+        closeLabel.position = CGPoint(x: 0, y: -boardHeight/2 + 30)
+        board.addChild(closeLabel)
+    }
+    
     override func touchesBegan(_ touches: Set<UITouch>, with event: UIEvent?) {
         guard let touch = touches.first else { return }
         let location = touch.location(in: self)
         let nodes = self.nodes(at: location)
         
-        if let popup = childNode(withName: "popup_overlay") {
-            popup.removeFromParent()
+        // Handle Popups
+        if let overlay = childNode(withName: "popup_overlay") {
+            overlay.removeFromParent()
             hapticFeedback.impactOccurred()
             return
         }
         
+        if let shopOverlay = childNode(withName: "shop_overlay") {
+            // Check for button taps inside shop
+            for node in nodes {
+                let parent = (node.name == "btn_body") ? node.parent : node
+                if let name = parent?.name, name.starts(with: "skin_") {
+                    let skinName = String(name.dropFirst(5))
+                    if let skin = ButtonSkin(rawValue: skinName) {
+                        handleSkinAction(skin)
+                    }
+                    return
+                }
+            }
+            // If tapped outside buttons but on overlay -> Close
+            shopOverlay.removeFromParent()
+            hapticFeedback.impactOccurred()
+            updateCoinDisplay()
+            return
+        }
+        
         for node in nodes {
-            // Check if we hit the button body or the container
             let parent = (node.name == "btn_body") ? node.parent : node
             let nodeName = parent?.name ?? node.name
             
@@ -390,9 +510,15 @@ class MenuScene: SKScene {
                     self.hapticFeedback.impactOccurred()
                     self.transitionToGame()
                 }
+            } else if nodeName == "shop" {
+                animateTap(parent ?? node) {
+                    self.hapticFeedback.impactOccurred()
+                    self.showShopPopup()
+                }
             } else if nodeName == "settings" {
                 animateTap(parent ?? node) {
                     self.hapticFeedback.impactOccurred()
+                    // Settings logic here
                 }
             } else if nodeName == "info" {
                 animateTap(parent ?? node) {
@@ -401,6 +527,25 @@ class MenuScene: SKScene {
                 }
             }
         }
+    }
+    
+    private func handleSkinAction(_ skin: ButtonSkin) {
+        let mgr = GameManager.shared
+        if mgr.unlockedSkins.contains(skin) {
+            mgr.selectedSkin = skin
+        } else {
+            if mgr.unlockSkin(skin) {
+                mgr.selectedSkin = skin // Auto select on buy
+                playSound("kaching.mp3") // You might need this file, or generic success
+            } else {
+                notificationFeedback.notificationOccurred(.error)
+                return
+            }
+        }
+        hapticFeedback.impactOccurred()
+        // Refresh UI
+        childNode(withName: "shop_overlay")?.removeFromParent()
+        showShopPopup()
     }
     
     private func animateTap(_ node: SKNode, completion: @escaping () -> Void) {
@@ -413,18 +558,20 @@ class MenuScene: SKScene {
     
     func transitionToGame() {
         guard let view = self.view else { return }
-        // Capture snapshot for custom door transition
         if let snapshot = view.texture(from: self) {
             let gameScene = GameScene(size: self.size)
             gameScene.scaleMode = .aspectFill
             gameScene.doorTransitionTexture = snapshot
-            view.presentScene(gameScene) // Present immediately, GameScene handles animation
+            view.presentScene(gameScene)
         } else {
-            // Fallback if snapshot fails
             let gameScene = GameScene(size: self.size)
             gameScene.scaleMode = .aspectFill
             let transition = SKTransition.doorsOpenHorizontal(withDuration: 0.8)
             view.presentScene(gameScene, transition: transition)
         }
+    }
+    
+    private func playSound(_ fileName: String) {
+        run(SKAction.playSoundFileNamed(fileName, waitForCompletion: false))
     }
 }
