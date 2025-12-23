@@ -13,7 +13,6 @@ class StoreScene: SKScene {
     private var contentNode: SKNode?
     private var scrollContentNode: SKNode?
     private var tabButtons: [StoreCategory: SKNode] = [:]
-    private var filterButtons: [StoreFilter: SKNode] = [:]
 
     private var previewOverlay: SKNode?
     private var confirmOverlay: SKNode?
@@ -31,7 +30,6 @@ class StoreScene: SKScene {
         setupBackground()
         setupHeader()
         setupTabs()
-        setupFilters()
         setupContentArea()
         loadCategoryItems()
     }
@@ -106,7 +104,7 @@ class StoreScene: SKScene {
 
         // Coin display
         let coinContainer = SKNode()
-        coinContainer.position = CGPoint(x: frame.maxX - 80, y: headerY)
+        coinContainer.position = CGPoint(x: frame.maxX - 100, y: headerY)
         addChild(coinContainer)
 
         let coinBg = SKShapeNode(rectOf: CGSize(width: 120, height: 40), cornerRadius: 20)
@@ -121,44 +119,46 @@ class StoreScene: SKScene {
         coinLabel?.fontColor = .black
         coinLabel?.verticalAlignmentMode = .center
         coinContainer.addChild(coinLabel!)
+        
+        // Plus Button for Coins
+        let plusBtn = SKShapeNode(circleOfRadius: 18)
+        plusBtn.fillColor = .systemGreen
+        plusBtn.strokeColor = .white
+        plusBtn.lineWidth = 2
+        plusBtn.position = CGPoint(x: 75, y: 0)
+        plusBtn.name = "add_coins"
+        coinContainer.addChild(plusBtn)
+        
+        let plusLabel = SKLabelNode(fontNamed: "Gameplay")
+        plusLabel.text = "+"
+        plusLabel.fontSize = 24
+        plusLabel.fontColor = .white
+        plusLabel.verticalAlignmentMode = .center
+        plusLabel.position = CGPoint(x: 0, y: 1)
+        plusBtn.addChild(plusLabel)
     }
 
     // MARK: - Tab Setup
     private func setupTabs() {
         let safeBottom = view?.safeAreaInsets.bottom ?? 20
         let tabBarHeight: CGFloat = 80
-        // Move slightly up for floating effect
-        let tabY = safeBottom + tabBarHeight/2 + 5
+        let tabY = safeBottom + tabBarHeight/2 - 10
         
-        // Liquid Glass Tab Bar Background (Floating Pill)
-        let barWidth = frame.width * 0.92
-        let tabBarBg = SKShapeNode(rectOf: CGSize(width: barWidth, height: tabBarHeight), cornerRadius: 40)
-        
-        // Glass Effect: Red tint, low alpha
-        tabBarBg.fillColor = SKColor.systemRed.withAlphaComponent(0.15)
-        tabBarBg.strokeColor = SKColor.white.withAlphaComponent(0.4)
-        tabBarBg.lineWidth = 1.5
-        
-        // Add a subtle glow/shadow
-        let shadow = SKShapeNode(rectOf: CGSize(width: barWidth, height: tabBarHeight), cornerRadius: 40)
-        shadow.fillColor = .clear
-        shadow.strokeColor = SKColor.systemRed.withAlphaComponent(0.3)
-        shadow.lineWidth = 4
-        shadow.glowWidth = 6
-        shadow.position = .zero
-        tabBarBg.addChild(shadow)
-        
-        tabBarBg.position = CGPoint(x: frame.midX, y: tabY)
+        // Standard Tab Bar Background (Full Width)
+        let tabBarBg = SKShapeNode(rectOf: CGSize(width: frame.width, height: tabBarHeight + safeBottom))
+        tabBarBg.fillColor = .white
+        tabBarBg.strokeColor = SKColor(red: 0.9, green: 0.9, blue: 0.95, alpha: 1.0)
+        tabBarBg.lineWidth = 1
+        tabBarBg.position = CGPoint(x: frame.midX, y: (tabBarHeight + safeBottom)/2 - safeBottom/2)
         tabBarBg.zPosition = 100
         addChild(tabBarBg)
 
         let categories = StoreCategory.allCases
-        let tabWidth: CGFloat = barWidth / CGFloat(categories.count)
-        let startX = frame.midX - barWidth/2 + tabWidth/2
+        let tabWidth: CGFloat = frame.width / CGFloat(categories.count)
 
         for (index, category) in categories.enumerated() {
             let tabBtn = createTabButton(category: category, width: tabWidth)
-            tabBtn.position = CGPoint(x: startX + tabWidth * CGFloat(index), y: tabY)
+            tabBtn.position = CGPoint(x: tabWidth * CGFloat(index) + tabWidth/2, y: tabY)
             tabBtn.zPosition = 101
             tabBtn.name = "tab_\(category.rawValue)"
             addChild(tabBtn)
@@ -184,138 +184,66 @@ class StoreScene: SKScene {
             let texture = SKTexture(image: image)
             let sprite = SKSpriteNode(texture: texture)
             sprite.size = CGSize(width: 28, height: 26)
-            sprite.color = .white
+            sprite.color = .lightGray
             sprite.colorBlendFactor = 1.0
             sprite.name = "internal_icon"
-            sprite.position = CGPoint(x: 0, y: 0) // Centered if no label, or shift up
+            sprite.position = CGPoint(x: 0, y: 8) // Moved up slightly
             container.addChild(sprite)
         }
 
-        // Removed label for cleaner "liquid" look, or keep it very small/subtle? 
-        // Let's keep it but very small and clean.
         let label = SKLabelNode(fontNamed: "Gameplay")
         label.text = category.rawValue
         label.fontSize = 9
-        label.fontColor = .white
-        label.position = CGPoint(x: 0, y: -20)
+        label.fontColor = .lightGray
+        label.position = CGPoint(x: 0, y: -22) // Moved down to avoid overlap
         label.name = "internal_label"
-        label.alpha = 0.7
         container.addChild(label)
-        
-        // Adjust icon position to make room for label
-        if let icon = container.childNode(withName: "internal_icon") {
-            icon.position = CGPoint(x: 0, y: 5)
-        }
 
         return container
     }
     
     private func getIconName(for category: StoreCategory) -> String {
         switch category {
-        case .skins: return "paintpalette.fill"
-        case .themes: return "photo.fill"
-        case .emojis: return "face.smiling.fill"
-        case .effects: return "sparkles"
-        case .powerups: return "bolt.fill"
+        case .skins: return "tshirt.fill"
+        case .themes: return "leaf.fill"
+        case .emojis: return "face.smiling"
+        case .effects: return "wand.and.rays"
+        case .powerups: return "cart.fill"
         }
     }
 
     private func updateTabSelection() {
         for (category, node) in tabButtons {
             let isSelected = (category == currentCategory)
-            
-            // Active: Bright Red/White hybrid. Inactive: Muted Red/Gray.
-            let activeColor = SKColor.systemRed
-            let inactiveColor = SKColor.systemRed.withAlphaComponent(0.4)
+            let color: SKColor = isSelected ? .systemRed : .lightGray
             
             if let icon = node.childNode(withName: "internal_icon") as? SKSpriteNode {
-                icon.color = isSelected ? activeColor : inactiveColor
-                
+                icon.color = color
                 // Pop animation for selected
                 if isSelected {
-                    // Reset scale first
-                    icon.setScale(1.0)
                     icon.run(SKAction.sequence([
-                        SKAction.scale(to: 1.3, duration: 0.15),
+                        SKAction.scale(to: 1.2, duration: 0.1),
                         SKAction.scale(to: 1.0, duration: 0.1)
                     ]))
-                    
-                    // Add a subtle glow behind active icon
-                    if node.childNode(withName: "active_glow") == nil {
-                        let glow = SKShapeNode(circleOfRadius: 20)
-                        glow.fillColor = SKColor.white.withAlphaComponent(0.3)
-                        glow.strokeColor = .clear
-                        glow.name = "active_glow"
-                        glow.zPosition = -1
-                        node.addChild(glow)
-                        glow.run(SKAction.sequence([
-                            SKAction.scale(to: 1.2, duration: 0.2),
-                            SKAction.fadeOut(withDuration: 0.2),
-                            SKAction.removeFromParent()
-                        ]))
-                    }
                 }
             }
             
             if let label = node.childNode(withName: "internal_label") as? SKLabelNode {
-                label.fontColor = isSelected ? activeColor : inactiveColor
-                label.alpha = isSelected ? 1.0 : 0.6
+                label.fontColor = color
             }
-        }
-    }
-
-    // MARK: - Filter Setup
-    private func setupFilters() {
-        let safeTop = view?.safeAreaInsets.top ?? 50
-        // Moved higher since tabs are at bottom
-        let filterY = frame.maxY - safeTop - 90
-
-        let filters = StoreFilter.allCases
-        let filterWidth: CGFloat = 75
-
-        let startX = frame.midX - (CGFloat(filters.count) * filterWidth) / 2 + filterWidth/2
-
-        for (index, filter) in filters.enumerated() {
-            let filterBtn = createFilterButton(filter: filter)
-            filterBtn.position = CGPoint(x: startX + CGFloat(index) * filterWidth, y: filterY)
-            filterBtn.name = "filter_\(filter.rawValue)"
-            addChild(filterBtn)
-            filterButtons[filter] = filterBtn
-        }
-
-        updateFilterSelection()
-    }
-
-    private func createFilterButton(filter: StoreFilter) -> SKNode {
-        let container = SKNode()
-
-        let bg = SKShapeNode(rectOf: CGSize(width: 70, height: 30), cornerRadius: 15)
-        bg.fillColor = .white.withAlphaComponent(0.8)
-        bg.strokeColor = .gray.withAlphaComponent(0.3)
-        bg.lineWidth = 1
-        bg.name = "filter_bg"
-        container.addChild(bg)
-
-        let label = SKLabelNode(fontNamed: "Gameplay")
-        label.text = "\(filter.icon) \(filter.rawValue)"
-        label.fontSize = 10
-        label.fontColor = .darkGray
-        label.verticalAlignmentMode = .center
-        container.addChild(label)
-
-        return container
-    }
-
-    private func updateFilterSelection() {
-        for (filter, node) in filterButtons {
-            if let bg = node.childNode(withName: "filter_bg") as? SKShapeNode {
-                if filter == currentFilter {
-                    bg.fillColor = SKColor(red: 0.5, green: 0.8, blue: 0.6, alpha: 1.0)
-                    bg.strokeColor = SKColor(red: 0.3, green: 0.6, blue: 0.4, alpha: 1.0)
-                } else {
-                    bg.fillColor = .white.withAlphaComponent(0.8)
-                    bg.strokeColor = .gray.withAlphaComponent(0.3)
+            
+            // Selection indicator line
+            if isSelected {
+                if node.childNode(withName: "selection_line") == nil {
+                    let line = SKShapeNode(rectOf: CGSize(width: 35, height: 3), cornerRadius: 1.5)
+                    line.fillColor = .systemRed
+                    line.strokeColor = .clear
+                    line.position = CGPoint(x: 0, y: 35)
+                    line.name = "selection_line"
+                    node.addChild(line)
                 }
+            } else {
+                node.childNode(withName: "selection_line")?.removeFromParent()
             }
         }
     }
@@ -326,7 +254,7 @@ class StoreScene: SKScene {
         let safeBottom = view?.safeAreaInsets.bottom ?? 0
         let tabBarHeight: CGFloat = 80
         
-        let contentTop = frame.maxY - safeTop - 120
+        let contentTop = frame.maxY - safeTop - 80
         let contentBottom = safeBottom + tabBarHeight + 10
 
         // Content container with clipping
@@ -341,30 +269,32 @@ class StoreScene: SKScene {
         maskShape.fillColor = .white
         cropNode.maskNode = maskShape
         cropNode.position = CGPoint(x: frame.midX, y: (contentTop - contentBottom) / 2)
+        cropNode.name = "crop_node"
         contentNode?.addChild(cropNode)
 
+        // Initial content node
         scrollContentNode = SKNode()
-        let contentHeight = contentTop - contentBottom
-        scrollContentNode?.position = CGPoint(x: -frame.midX, y: contentHeight / 2)
+        scrollContentNode?.position = CGPoint(x: 0, y: (contentTop - contentBottom) / 2)
         cropNode.addChild(scrollContentNode!)
     }
 
     // MARK: - Load Items
-    private func loadCategoryItems() {
-        scrollContentNode?.removeAllChildren()
-        scrollOffset = 0
-
+    private func loadCategoryItems(transitionDirection: Int = 0) {
+        // transitionDirection: 1 (slide left, new from right), -1 (slide right, new from left), 0 (no animation)
+        
         let safeTop = view?.safeAreaInsets.top ?? 50
         let safeBottom = view?.safeAreaInsets.bottom ?? 0
         let tabBarHeight: CGFloat = 80
-        
-        let contentTop = frame.maxY - safeTop - 120
+        let contentTop = frame.maxY - safeTop - 80
         let contentBottom = safeBottom + tabBarHeight + 10
         let contentHeight = contentTop - contentBottom
 
-        // Reset scroll position
-        scrollContentNode?.position.y = contentHeight / 2
-
+        // Prepare new content node
+        let newContentNode = SKNode()
+        let initialY = contentHeight / 2
+        newContentNode.position = CGPoint(x: (transitionDirection == 0) ? 0 : CGFloat(transitionDirection) * frame.width, y: initialY)
+        
+        // 1. Populate Items
         var items: [(name: String, emoji: String, desc: String, cost: Int, isOwned: Bool, isSelected: Bool, id: String)] = []
 
         switch currentCategory {
@@ -399,19 +329,15 @@ class StoreScene: SKScene {
             }
         }
 
-        // Apply filter
-        let filteredItems = items.filter { item in
-            switch currentFilter {
-            case .all: return true
-            case .owned: return item.isOwned || currentCategory == .powerups
-            case .affordable: return GameManager.shared.totalCoins >= item.cost
-            case .notOwned: return !item.isOwned && currentCategory != .powerups
-            }
-        }
+        // Show all items (filter removed)
+        let filteredItems = items
 
         let cardHeight: CGFloat = 110
         let spacing: CGFloat = 15
-        let startY = contentHeight - cardHeight/2 - 10
+        
+        // Start from top (y = 0 relative to node, going down)
+        // Adjust for card center being 0
+        let startY: CGFloat = -cardHeight/2 - 10
 
         for (index, item) in filteredItems.enumerated() {
             let card = createItemCard(
@@ -423,21 +349,47 @@ class StoreScene: SKScene {
                 isSelected: item.isSelected,
                 itemId: item.id
             )
-            card.position = CGPoint(x: frame.midX, y: startY - CGFloat(index) * (cardHeight + spacing))
-            scrollContentNode?.addChild(card)
+            // Center horizontally (x=0), stack vertically
+            card.position = CGPoint(x: 0, y: startY - CGFloat(index) * (cardHeight + spacing))
+            newContentNode.addChild(card)
         }
-
-        let totalContentHeight = CGFloat(filteredItems.count) * (cardHeight + spacing) + 20
-        maxScrollOffset = max(0, totalContentHeight - contentHeight)
-
+        
         // Show empty state if no items
         if filteredItems.isEmpty {
             let emptyLabel = SKLabelNode(fontNamed: "Gameplay")
             emptyLabel.text = "No items found"
             emptyLabel.fontSize = 20
             emptyLabel.fontColor = .gray
-            emptyLabel.position = CGPoint(x: frame.midX, y: contentHeight / 2)
-            scrollContentNode?.addChild(emptyLabel)
+            emptyLabel.position = CGPoint(x: 0, y: -contentHeight/4)
+            newContentNode.addChild(emptyLabel)
+        }
+        
+        // 2. Setup Scroll Params
+        let totalContentHeight = CGFloat(filteredItems.count) * (cardHeight + spacing) + 20
+        maxScrollOffset = max(0, totalContentHeight - contentHeight)
+        scrollOffset = 0 // Reset scroll
+
+        // 3. Swap Nodes & Animate
+        guard let cropNode = contentNode?.childNode(withName: "crop_node") else { return }
+        
+        if transitionDirection != 0, let oldNode = scrollContentNode {
+            cropNode.addChild(newContentNode)
+            scrollContentNode = newContentNode
+            
+            // Slide animation
+            let duration = 0.3
+            let moveOut = SKAction.moveBy(x: CGFloat(-transitionDirection) * frame.width, y: 0, duration: duration)
+            let moveIn = SKAction.move(to: CGPoint(x: 0, y: initialY), duration: duration)
+            
+            moveOut.timingMode = .easeInEaseOut
+            moveIn.timingMode = .easeInEaseOut
+            
+            oldNode.run(SKAction.sequence([moveOut, SKAction.removeFromParent()]))
+            newContentNode.run(moveIn)
+        } else {
+            scrollContentNode?.removeFromParent()
+            cropNode.addChild(newContentNode)
+            scrollContentNode = newContentNode
         }
     }
 
@@ -1180,27 +1132,34 @@ class StoreScene: SKScene {
                 }
                 return
             }
+            
+            // Add Coins
+            if nodeName == "add_coins" {
+                hapticFeedback.impactOccurred()
+                // Placeholder action for adding coins
+                let label = SKLabelNode(fontNamed: "Gameplay")
+                label.text = "Coming Soon!"
+                label.fontSize = 20
+                label.fontColor = .systemGreen
+                label.position = CGPoint(x: frame.maxX - 100, y: frame.maxY - 100)
+                addChild(label)
+                label.run(SKAction.sequence([SKAction.moveBy(x: 0, y: 50, duration: 1.0), SKAction.removeFromParent()]))
+                return
+            }
 
             // Tab buttons
             if let name = nodeName, name.starts(with: "tab_") {
                 let categoryName = String(name.dropFirst(4))
                 if let category = StoreCategory(rawValue: categoryName) {
+                    // Determine slide direction
+                    let oldIndex = StoreCategory.allCases.firstIndex(of: currentCategory) ?? 0
+                    let newIndex = StoreCategory.allCases.firstIndex(of: category) ?? 0
+                    let direction = (newIndex > oldIndex) ? 1 : (newIndex < oldIndex ? -1 : 0)
+                    
                     hapticFeedback.impactOccurred()
                     currentCategory = category
                     updateTabSelection()
-                    loadCategoryItems()
-                }
-                return
-            }
-
-            // Filter buttons
-            if let name = nodeName, name.starts(with: "filter_") {
-                let filterName = String(name.dropFirst(7))
-                if let filter = StoreFilter(rawValue: filterName) {
-                    hapticFeedback.impactOccurred()
-                    currentFilter = filter
-                    updateFilterSelection()
-                    loadCategoryItems()
+                    loadCategoryItems(transitionDirection: direction)
                 }
                 return
             }
@@ -1289,15 +1248,37 @@ class StoreScene: SKScene {
         let deltaY = location.y - lastTouchY
         velocity = deltaY
 
-        // Direct manipulation: content follows finger
+        // Direct manipulation: content follows finger (deltaY > 0 means finger down -> offset decrease -> view UP (higher y) -> see higher items?)
+        // Wait: If I drag DOWN (deltaY > 0), I expect content to move DOWN.
+        // scrollContentNode.y = initialY + scrollOffset.
+        // If I want content to move DOWN, scrollOffset must decrease.
+        // So scrollOffset -= deltaY is correct.
+        
         scrollOffset -= deltaY
         scrollOffset = max(0, min(scrollOffset, maxScrollOffset))
 
         // Update position smoothly
         let safeTop = view?.safeAreaInsets.top ?? 50
         let safeBottom = view?.safeAreaInsets.bottom ?? 0
-        let contentHeight = frame.maxY - safeTop - 175 - safeBottom - 20
-        scrollContentNode?.position.y = -scrollOffset + contentHeight/2
+        let tabBarHeight: CGFloat = 80
+        
+        let contentTop = frame.maxY - safeTop - 80
+        let contentBottom = safeBottom + tabBarHeight + 10
+        let contentHeight = contentTop - contentBottom
+        
+        // Initial Y is top of view
+        let initialY = contentHeight / 2
+        
+        // Items are at y=0, -100, -200...
+        // To see item at -100 (scrolled down), node y must be initialY + 100.
+        // So scrollOffset increases as we scroll down.
+        // If scrollOffset increases, content moves UP.
+        // If I drag UP (deltaY < 0), I want to see lower items.
+        // So content must move UP.
+        // So scrollOffset must increase.
+        // scrollOffset -= deltaY (deltaY < 0) -> scrollOffset increases. Correct.
+        
+        scrollContentNode?.position.y = initialY + scrollOffset
 
         lastTouchY = location.y
     }
@@ -1318,8 +1299,14 @@ class StoreScene: SKScene {
 
                 let safeTop = self.view?.safeAreaInsets.top ?? 50
                 let safeBottom = self.view?.safeAreaInsets.bottom ?? 0
-                let contentHeight = self.frame.maxY - safeTop - 175 - safeBottom - 20
-                self.scrollContentNode?.position.y = -self.scrollOffset + contentHeight/2
+                let tabBarHeight: CGFloat = 80
+                
+                let contentTop = self.frame.maxY - safeTop - 80
+                let contentBottom = safeBottom + tabBarHeight + 10
+                let contentHeight = contentTop - contentBottom
+                let initialY = contentHeight / 2
+                
+                self.scrollContentNode?.position.y = initialY + self.scrollOffset
             }
             run(momentumAction)
         }
