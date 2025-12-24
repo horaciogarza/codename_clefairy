@@ -8,17 +8,32 @@
 import UIKit
 import SpriteKit
 import GameplayKit
+import AppTrackingTransparency
 
 class GameViewController: UIViewController {
 
     private var sceneInitialized = false
 
-    override func viewDidLayoutSubviews() {
-        super.viewDidLayoutSubviews()
+    override func viewDidAppear(_ animated: Bool) {
+        super.viewDidAppear(animated)
         
+        // Request ATT permission
+        if #available(iOS 14, *) {
+            ATTrackingManager.requestTrackingAuthorization { [weak self] status in
+                // This completion handler is called on a background thread.
+                // We need to switch to the main thread to present the scene.
+                DispatchQueue.main.async {
+                    self?.presentLaunchScene()
+                }
+            }
+        } else {
+            presentLaunchScene()
+        }
+    }
+    
+    private func presentLaunchScene() {
         if !sceneInitialized {
             if let view = self.view as! SKView? {
-                // Create the launch scene with correct bounds
                 let scene = LaunchScene(size: view.bounds.size)
                 scene.scaleMode = .aspectFill
                 view.presentScene(scene)
@@ -27,7 +42,6 @@ class GameViewController: UIViewController {
                 view.showsFPS = false
                 view.showsNodeCount = false
                 
-                // Setup AdMob Banner
                 Task { @MainActor in
                     AdManager.shared.setupBanner(in: self)
                 }
