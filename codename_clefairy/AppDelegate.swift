@@ -7,6 +7,7 @@
 
 import UIKit
 import GoogleMobileAds
+import AppTrackingTransparency
 
 @main
 class AppDelegate: UIResponder, UIApplicationDelegate {
@@ -18,12 +19,16 @@ class AppDelegate: UIResponder, UIApplicationDelegate {
         // Initialize Google Mobile Ads SDK - Use renamed Swift members
         MobileAds.shared.start(completionHandler: nil)
         
-        // Preload first ad
-        Task { @MainActor in
-            AdManager.shared.loadInterstitial()
-        }
-        
         return true
+    }
+    
+    func applicationDidBecomeActive(_ application: UIApplication) {
+        ATTrackingManager.requestTrackingAuthorization { status in
+            // Now you can load ads, regardless of the status
+            Task { @MainActor in
+                AdManager.shared.loadInterstitial()
+            }
+        }
     }
 
     func applicationWillResignActive(_ application: UIApplication) {
@@ -34,9 +39,5 @@ class AppDelegate: UIResponder, UIApplicationDelegate {
 
     func applicationWillEnterForeground(_ application: UIApplication) {
     }
-
-    func applicationDidBecomeActive(_ application: UIApplication) {
-    }
-
 
 }
