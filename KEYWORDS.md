@@ -1,0 +1,1 @@
+memory, puzzle, emoji, sequence, game, brain, challenge, classic, zen, arcade, fun, casual, tap, quick, fast, focus, concentration, reflexes, mind, skill, pattern, logic, family, kids, memorize, mental, trainer, engaging, addictive, free, offline, no wifi, speed, boss, frenzy, high score
