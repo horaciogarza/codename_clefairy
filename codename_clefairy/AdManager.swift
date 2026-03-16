@@ -5,8 +5,15 @@ import UIKit
 class AdManager: NSObject, BannerViewDelegate, FullScreenContentDelegate {
     static let shared = AdManager()
     
+    weak var gameScene: GameScene?
     var onAdWillPresent: (() -> Void)?
     var onAdDidDismiss: (() -> Void)?
+
+    func cleanupCallbacks() {
+        onAdWillPresent = nil
+        onAdDidDismiss = nil
+        gameScene = nil
+    }
     
     private var interstitial: InterstitialAd?
     

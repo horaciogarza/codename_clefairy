@@ -33,7 +33,7 @@ class GameViewController: UIViewController {
     
     private func presentLaunchScene() {
         if !sceneInitialized {
-            if let view = self.view as! SKView? {
+            if let view = self.view as? SKView {
                 let scene = LaunchScene(size: view.bounds.size)
                 scene.scaleMode = .aspectFill
                 view.presentScene(scene)
@@ -52,6 +52,19 @@ class GameViewController: UIViewController {
 
     override func viewDidLoad() {
         super.viewDidLoad()
+
+        NotificationCenter.default.addObserver(
+            self,
+            selector: #selector(appDidEnterBackground),
+            name: UIApplication.didEnterBackgroundNotification,
+            object: nil
+        )
+    }
+
+    @objc private func appDidEnterBackground() {
+        guard let skView = self.view as? SKView,
+              let gameScene = skView.scene as? GameScene else { return }
+        gameScene.pauseGame()
     }
 
     override var supportedInterfaceOrientations: UIInterfaceOrientationMask {

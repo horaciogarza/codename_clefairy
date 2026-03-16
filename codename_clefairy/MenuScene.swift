@@ -1,162 +1,198 @@
 import SpriteKit
 
 class MenuScene: SKScene {
-    
+
     private let hapticFeedback = UIImpactFeedbackGenerator(style: .medium)
     private let notificationFeedback = UINotificationFeedbackGenerator()
-    
+    private var bgRenderer: BackgroundRenderer?
+
     override func didMove(to view: SKView) {
-        backgroundColor = SKColor(red: 0.25, green: 0.75, blue: 1.00, alpha: 1.0) // Dark Navy Blue 0x0A0E14
-        setupBackground()
+        bgRenderer = BackgroundRenderer(scene: self)
+        bgRenderer?.setupMenuBackground()
         setupUI()
-        
+
         Task { @MainActor in
             AdManager.shared.showBanner()
         }
     }
-    
-    private func setupBackground() {
-        // 1. Hills
-        let hill1 = SKShapeNode()
-        let path1 = UIBezierPath()
-        path1.move(to: CGPoint(x: 0, y: 0))
-        path1.addLine(to: CGPoint(x: 0, y: frame.height * 0.3))
-        path1.addQuadCurve(to: CGPoint(x: frame.width, y: frame.height * 0.2), controlPoint: CGPoint(x: frame.width * 0.5, y: frame.height * 0.4))
-        path1.addLine(to: CGPoint(x: frame.width, y: 0))
-        path1.close()
-        hill1.path = path1.cgPath
-        hill1.fillColor = SKColor(red: 0.4, green: 0.8, blue: 0.4, alpha: 1.0)
-        hill1.strokeColor = .clear
-        hill1.zPosition = -4
-        addChild(hill1)
-        
-        let hill2 = SKShapeNode()
-        let path2 = UIBezierPath()
-        path2.move(to: CGPoint(x: 0, y: 0))
-        path2.addLine(to: CGPoint(x: 0, y: frame.height * 0.15))
-        path2.addQuadCurve(to: CGPoint(x: frame.width, y: frame.height * 0.25), controlPoint: CGPoint(x: frame.width * 0.4, y: frame.height * 0.05))
-        path2.addLine(to: CGPoint(x: frame.width, y: 0))
-        path2.close()
-        hill2.path = path2.cgPath
-        hill2.fillColor = SKColor(red: 0.3, green: 0.7, blue: 0.3, alpha: 1.0) // Darker Green
-        hill2.strokeColor = .clear
-        hill2.zPosition = -3
-        addChild(hill2)
-        
-        // 2. Pixeled Clouds
-        for _ in 0..<5 {
-            spawnCloud()
-        }
-    }
-    
-    private func spawnCloud() {
-        let cloudContainer = SKNode()
-        let blockSize: CGFloat = 20
-        let cols = Int.random(in: 4...7)
-        let rows = Int.random(in: 2...4)
-        
-        for r in 0..<rows {
-            for c in 0..<cols {
-                if Bool.random() || (r > 0 && r < rows-1 && c > 0 && c < cols-1) {
-                    let block = SKShapeNode(rectOf: CGSize(width: blockSize, height: blockSize))
-                    block.fillColor = .white
-                    block.strokeColor = .clear
-                    block.position = CGPoint(x: CGFloat(c) * blockSize, y: CGFloat(r) * blockSize)
-                    cloudContainer.addChild(block)
-                }
-            }
-        }
-        
-        cloudContainer.alpha = 0.8
-        cloudContainer.position = CGPoint(
-            x: CGFloat.random(in: 0...frame.width),
-            y: CGFloat.random(in: frame.midY...frame.maxY)
-        )
-        cloudContainer.zPosition = -6
-        addChild(cloudContainer)
-        
-        let move = SKAction.moveBy(x: frame.width + 200, y: 0, duration: Double.random(in: 30...60))
-        let reset = SKAction.moveBy(x: -(frame.width + 400), y: 0, duration: 0)
-        cloudContainer.run(SKAction.repeatForever(SKAction.sequence([move, reset])))
-    }
-    
+
+    // MARK: - UI
+
     func setupUI() {
         let shiftY = size.height * 0.05
-        
-        // --- How To Play Button (Bottom Left) ---
-        let infoBtn = createCartoonButton(text: "HOW TO PLAY", color: .systemPink, size: CGSize(width: 180, height: 50))
-        let safeBottom = view?.safeAreaInsets.bottom ?? 20
-        infoBtn.position = CGPoint(x: 110, y: safeBottom + 50 + shiftY)
-        infoBtn.name = "info"
-        addChild(infoBtn)
-        
+        let theme = ThemeManager.shared.currentTheme
+
         // --- Title ---
         let titleNode = SKNode()
         titleNode.position = CGPoint(x: frame.midX, y: frame.midY + (frame.height * 0.3))
+        titleNode.zPosition = 5
         addChild(titleNode)
-        
-        // --- High Score Display ---
-        let highScoreLabel = SKLabelNode(fontNamed: "Gameplay")
-        highScoreLabel.text = "BEST: \(GameManager.shared.highScore)"
-        highScoreLabel.fontSize = 20
-        highScoreLabel.fontColor = .white
-        highScoreLabel.position = CGPoint(x: frame.midX, y: titleNode.position.y - 60)
-        addChild(highScoreLabel)
-        
+
         let titleText = "MEMORANDUM"
-        let colors: [SKColor] = [.red, .orange, .yellow, .green, .blue, .purple]
-        
+        let colors: [SKColor] = [.red, .orange, .yellow, .green, .cyan, .blue, .purple, .magenta, .red, .orange]
         let charSize: CGFloat = 38
         let spacing: CGFloat = 30
         var xOffset: CGFloat = -(CGFloat(titleText.count) * (spacing / 2))
-        
+
         for (i, char) in titleText.enumerated() {
             let charNode = SKLabelNode(fontNamed: "Gameplay")
             charNode.text = String(char)
             charNode.fontSize = charSize
             charNode.fontColor = colors[i % colors.count]
             charNode.position = CGPoint(x: xOffset, y: 0)
-            
-            // Stroke effect (shadow)
+
             let shadow = SKLabelNode(fontNamed: "Gameplay")
             shadow.text = String(char)
             shadow.fontSize = charSize
-            shadow.fontColor = .black
+            shadow.fontColor = .black.withAlphaComponent(0.4)
             shadow.zPosition = -1
             shadow.position = CGPoint(x: 3, y: -3)
             charNode.addChild(shadow)
-            
+
             titleNode.addChild(charNode)
-            
+
             let bounce = SKAction.sequence([
                 SKAction.moveBy(x: 0, y: 5, duration: 0.3),
                 SKAction.moveBy(x: 0, y: -5, duration: 0.3)
             ])
             let delay = SKAction.wait(forDuration: Double(i) * 0.1)
             charNode.run(SKAction.repeatForever(SKAction.sequence([delay, bounce, SKAction.wait(forDuration: 2.0)])))
-            
+
             xOffset += spacing
         }
-        
-        // --- Play Classic Button ---
-        let playClassicBtn = createCartoonButton(text: "PLAY CLASSIC", color: .systemGreen, size: CGSize(width: frame.width * 0.7, height: 80))
-        playClassicBtn.position = CGPoint(x: frame.midX, y: frame.midY - (frame.height * 0.12) + shiftY)
+
+        // --- High Score & Streak ---
+        let statsLine = SKNode()
+        statsLine.position = CGPoint(x: frame.midX, y: titleNode.position.y - 55)
+        statsLine.zPosition = 5
+        addChild(statsLine)
+
+        let streak = StatsManager.shared.currentDailyStreak
+
+        let highScoreLabel = SKLabelNode(fontNamed: "Gameplay")
+        highScoreLabel.text = "BEST: \(GameManager.shared.highScore)"
+        highScoreLabel.fontSize = 18
+        highScoreLabel.fontColor = .white
+        highScoreLabel.horizontalAlignmentMode = .center
+        highScoreLabel.position = CGPoint(x: streak > 0 ? -55 : 0, y: 0)
+        statsLine.addChild(highScoreLabel)
+
+        if streak > 0 {
+            // Fire icon via SF Symbol
+            let streakContainer = SKNode()
+            streakContainer.position = CGPoint(x: 65, y: 0)
+            statsLine.addChild(streakContainer)
+
+            if let fireIcon = UIFactory.symbolSprite("flame.fill", pointSize: 14, color: .systemOrange, size: CGSize(width: 16, height: 16)) {
+                fireIcon.position = CGPoint(x: -35, y: 1)
+                streakContainer.addChild(fireIcon)
+            }
+
+            let streakLabel = SKLabelNode(fontNamed: "Gameplay")
+            streakLabel.text = "\(streak)-DAY STREAK"
+            streakLabel.fontSize = 14
+            streakLabel.fontColor = .systemOrange
+            streakLabel.horizontalAlignmentMode = .left
+            streakLabel.verticalAlignmentMode = .center
+            streakLabel.position = CGPoint(x: -22, y: 0)
+            streakContainer.addChild(streakLabel)
+        }
+
+        // --- Layout from bottom up, accounting for banner ad ---
+        let safeBottom = view?.safeAreaInsets.bottom ?? 20
+        let bannerHeight: CGFloat = 60 // AdMob adaptive banner (~50pt + margin)
+        let bottomAnchor = safeBottom + bannerHeight + 10
+
+        // --- How To Play (bottom center) ---
+        let infoBtn = UIFactory.createButtonWithIcon(
+            text: "HOW TO PLAY",
+            systemName: "questionmark.circle.fill",
+            color: .systemPink,
+            size: CGSize(width: 185, height: 44),
+            iconSize: 15
+        )
+        infoBtn.position = CGPoint(x: frame.midX, y: bottomAnchor + 22)
+        infoBtn.name = "info"
+        infoBtn.zPosition = 5
+        addChild(infoBtn)
+
+        // --- Bottom Icon Row ---
+        let iconY = infoBtn.position.y + 62
+        let iconSpacing: CGFloat = 68
+        let startX = frame.midX - (iconSpacing * 1.5)
+
+        let settingsBtn = UIFactory.createIconButton(systemName: "gearshape.fill", color: .systemGray, size: 50, iconSize: 22)
+        settingsBtn.position = CGPoint(x: startX, y: iconY)
+        settingsBtn.name = "settings"
+        settingsBtn.zPosition = 5
+        addChild(settingsBtn)
+
+        let statsBtn = UIFactory.createIconButton(systemName: "chart.bar.fill", color: .systemIndigo, size: 50, iconSize: 22)
+        statsBtn.position = CGPoint(x: startX + iconSpacing, y: iconY)
+        statsBtn.name = "stats"
+        statsBtn.zPosition = 5
+        addChild(statsBtn)
+
+        let themesBtn = UIFactory.createIconButton(systemName: "paintbrush.fill", color: .systemPurple, size: 50, iconSize: 22)
+        themesBtn.position = CGPoint(x: startX + iconSpacing * 2, y: iconY)
+        themesBtn.name = "themes_btn"
+        themesBtn.zPosition = 5
+        addChild(themesBtn)
+
+        let achievementsBtn = UIFactory.createIconButton(systemName: "trophy.fill", color: .systemYellow, size: 50, iconSize: 22)
+        achievementsBtn.position = CGPoint(x: startX + iconSpacing * 3, y: iconY)
+        achievementsBtn.name = "achievements"
+        achievementsBtn.zPosition = 5
+        addChild(achievementsBtn)
+
+        // --- Daily Challenge ---
+        let dailyCompleted = DailyChallengeManager.shared.hasCompletedToday
+
+        let dailyBtn = UIFactory.createButtonWithIcon(
+            text: dailyCompleted ? "DAILY (DONE)" : "DAILY",
+            systemName: dailyCompleted ? "checkmark.circle.fill" : "calendar",
+            color: dailyCompleted ? .gray : .systemOrange,
+            size: CGSize(width: frame.width * 0.72, height: 60),
+            iconSize: 19
+        )
+        dailyBtn.position = CGPoint(x: frame.midX, y: iconY + 68)
+        dailyBtn.name = "play_daily"
+        dailyBtn.zPosition = 5
+        addChild(dailyBtn)
+
+        // --- Play Zen ---
+        let playZenBtn = UIFactory.createButtonWithIcon(
+            text: "PLAY ZEN",
+            systemName: "leaf.fill",
+            color: .systemBlue,
+            size: CGSize(width: frame.width * 0.72, height: 60),
+            iconSize: 19
+        )
+        playZenBtn.position = CGPoint(x: frame.midX, y: dailyBtn.position.y + 76)
+        playZenBtn.name = "play_zen"
+        playZenBtn.zPosition = 5
+        addChild(playZenBtn)
+
+        // --- Play Classic (main CTA) ---
+        let playClassicBtn = UIFactory.createButtonWithIcon(
+            text: "PLAY CLASSIC",
+            systemName: "play.fill",
+            color: .systemGreen,
+            size: CGSize(width: frame.width * 0.72, height: 72),
+            iconSize: 21
+        )
+        playClassicBtn.position = CGPoint(x: frame.midX, y: playZenBtn.position.y + 80)
         playClassicBtn.name = "play_classic"
+        playClassicBtn.zPosition = 5
         addChild(playClassicBtn)
-        
+
         let classicPulse = SKAction.sequence([
-            SKAction.scale(to: 1.05, duration: 0.6),
-            SKAction.scale(to: 0.95, duration: 0.6)
+            SKAction.scale(to: 1.04, duration: 0.7),
+            SKAction.scale(to: 0.96, duration: 0.7)
         ])
         playClassicBtn.run(SKAction.repeatForever(classicPulse))
-        
-        // --- Play Zen Button ---
-        let playZenBtn = createCartoonButton(text: "PLAY ZEN", color: .systemBlue, size: CGSize(width: frame.width * 0.7, height: 70))
-        playZenBtn.position = CGPoint(x: frame.midX, y: playClassicBtn.position.y - 100)
-        playZenBtn.name = "play_zen"
-        addChild(playZenBtn)
-        
-        // Check for first launch - PRESENT ONBOARDING
+
+        // --- First launch ---
         if !UserDefaults.standard.bool(forKey: "HasLaunchedBefore") {
             UserDefaults.standard.set(true, forKey: "HasLaunchedBefore")
             run(SKAction.wait(forDuration: 0.1)) { [weak self] in
@@ -164,184 +200,208 @@ class MenuScene: SKScene {
             }
         }
     }
-    
+
+    // MARK: - Navigation
+
     private func transitionToOnboarding() {
         let onboarding = OnboardingScene(size: self.size)
         onboarding.scaleMode = .aspectFill
         let transition = SKTransition.moveIn(with: .up, duration: 0.5)
         view?.presentScene(onboarding, transition: transition)
     }
-    
-    // --- Popup & Button Helpers ---
-    
-    private func createIconBtn(text: String, color: SKColor) -> SKNode {
-        let container = SKNode()
-        let size: CGFloat = 50
-        
-        let shadow = SKShapeNode(circleOfRadius: size/2)
-        shadow.fillColor = .black.withAlphaComponent(0.2)
-        shadow.strokeColor = .clear
-        shadow.position = CGPoint(x: 2, y: -2)
-        container.addChild(shadow)
-        
-        let body = SKShapeNode(circleOfRadius: size/2)
-        body.fillColor = color
-        body.strokeColor = .white
-        body.lineWidth = 3
-        body.name = "btn_body"
-        container.addChild(body)
-        
-        let label = SKLabelNode(fontNamed: "AppleColorEmoji") // Better for emojis
-        label.text = text
-        label.fontSize = 24
-        label.fontColor = .white
-        label.verticalAlignmentMode = .center
-        label.zPosition = 1
-        container.addChild(label)
-        
-        return container
-    }
-    
-    private func createCartoonPanel(size: CGSize, color: SKColor) -> SKNode {
-        let container = SKNode()
-        
-        let shadow = SKShapeNode(rectOf: size, cornerRadius: 20)
-        shadow.fillColor = .black.withAlphaComponent(0.4)
-        shadow.strokeColor = .clear
-        shadow.position = CGPoint(x: 8, y: -8)
-        container.addChild(shadow)
-        
-        let body = SKShapeNode(rectOf: size, cornerRadius: 20)
-        body.fillColor = color
-        body.strokeColor = .white
-        body.lineWidth = 6
-        container.addChild(body)
-        
-        return container
-    }
-    
-    private func createCartoonButton(text: String, color: SKColor, size: CGSize) -> SKNode {
-        let container = SKNode()
-        
-        let shadow = SKShapeNode(rectOf: size, cornerRadius: 25)
-        shadow.fillColor = .black.withAlphaComponent(0.4)
-        shadow.strokeColor = .clear
-        shadow.position = CGPoint(x: 0, y: -8)
-        container.addChild(shadow)
-        
-        let body = SKShapeNode(rectOf: size, cornerRadius: 25)
-        body.fillColor = color
-        body.strokeColor = .white
-        body.lineWidth = 6
-        body.name = "btn_body"
-        container.addChild(body)
-        
-        let label = SKLabelNode(fontNamed: "Gameplay")
-        label.text = text
-        label.fontSize = size.height * 0.4
-        label.fontColor = .white
-        label.verticalAlignmentMode = .center
-        label.zPosition = 1
-        label.name = "btn_label"
-        container.addChild(label)
-        
-        return container
-    }
-    
-    private func showIntroPopup() {
-        // Prevent double open
+
+    // MARK: - Achievements Popup
+
+    private func showAchievementsPopup() {
         if childNode(withName: "popup_overlay") != nil { return }
-        
+
         let overlay = SKShapeNode(rectOf: self.size)
-        overlay.fillColor = .black.withAlphaComponent(0.7)
+        overlay.fillColor = .black.withAlphaComponent(0.85)
         overlay.strokeColor = .clear
         overlay.position = CGPoint(x: frame.midX, y: frame.midY)
         overlay.zPosition = 100
         overlay.name = "popup_overlay"
         addChild(overlay)
-        
-        let board = createCartoonPanel(size: CGSize(width: frame.width * 0.85, height: frame.height * 0.6), color: .white)
-        board.position = .zero
-        overlay.addChild(board)
-        
-        let title = SKLabelNode(fontNamed: "Gameplay")
-        title.text = "HOW TO PLAY"
-        title.fontSize = 32
-        title.fontColor = .black
-        title.position = CGPoint(x: 0, y: 180)
-        title.zPosition = 10
-        board.addChild(title)
-        
-        let instructions = [
-            "1. Watch emojis!",
-            "2. Wait for GO!",
-            "3. Tap in ORDER!",
-            "4. Be FAST!",
-            "",
-            "TAP TO START"
-        ]
-        
-        for (i, line) in instructions.enumerated() {
-            let label = SKLabelNode(fontNamed: "Gameplay")
-            label.text = line
-            label.fontSize = 20
-            label.fontColor = .darkGray
-            label.position = CGPoint(x: 0, y: 100 - CGFloat(i * 40))
-            label.zPosition = 10
-            board.addChild(label)
+
+        // Header
+        let headerIcon = SKNode()
+        headerIcon.position = CGPoint(x: 0, y: frame.height * 0.37)
+        headerIcon.zPosition = 101
+        overlay.addChild(headerIcon)
+
+        if let trophy = UIFactory.symbolSprite("trophy.fill", pointSize: 28, color: .systemYellow, size: CGSize(width: 30, height: 30)) {
+            trophy.position = CGPoint(x: -80, y: 2)
+            headerIcon.addChild(trophy)
         }
+
+        let title = SKLabelNode(fontNamed: "Gameplay")
+        title.text = "ACHIEVEMENTS"
+        title.fontSize = 26
+        title.fontColor = .systemYellow
+        title.horizontalAlignmentMode = .left
+        title.verticalAlignmentMode = .center
+        title.position = CGPoint(x: -58, y: 0)
+        headerIcon.addChild(title)
+
+        // Count badge
+        let unlockedCount = AchievementManager.shared.unlockedCount
+        let totalCount = AchievementManager.allAchievements.count
+        let countLabel = SKLabelNode(fontNamed: "Gameplay")
+        countLabel.text = "\(unlockedCount)/\(totalCount)"
+        countLabel.fontSize = 14
+        countLabel.fontColor = .lightGray
+        countLabel.position = CGPoint(x: 0, y: frame.height * 0.33)
+        countLabel.zPosition = 101
+        overlay.addChild(countLabel)
+
+        var yPos: CGFloat = frame.height * 0.27
+
+        for achievement in AchievementManager.allAchievements {
+            let isUnlocked = AchievementManager.shared.isUnlocked(achievement.id)
+
+            let row = SKNode()
+            row.position = CGPoint(x: 0, y: yPos)
+            row.zPosition = 101
+
+            let bg = SKShapeNode(rectOf: CGSize(width: frame.width * 0.78, height: 40), cornerRadius: 10)
+            bg.fillColor = isUnlocked ? .white.withAlphaComponent(0.12) : .black.withAlphaComponent(0.3)
+            bg.strokeColor = isUnlocked ? .systemYellow.withAlphaComponent(0.4) : .gray.withAlphaComponent(0.15)
+            bg.lineWidth = 1
+            row.addChild(bg)
+
+            // Status icon
+            let iconName = isUnlocked ? "checkmark.seal.fill" : "lock.fill"
+            let iconColor: UIColor = isUnlocked ? .systemYellow : .gray
+            if let icon = UIFactory.symbolSprite(iconName, pointSize: 16, weight: .medium, color: iconColor, size: CGSize(width: 18, height: 18)) {
+                icon.position = CGPoint(x: -frame.width * 0.33, y: 0)
+                row.addChild(icon)
+            }
+
+            let nameLabel = SKLabelNode(fontNamed: "Gameplay")
+            nameLabel.text = achievement.name
+            nameLabel.fontSize = 12
+            nameLabel.fontColor = isUnlocked ? .white : .gray
+            nameLabel.horizontalAlignmentMode = .left
+            nameLabel.verticalAlignmentMode = .center
+            nameLabel.position = CGPoint(x: -frame.width * 0.25, y: 5)
+            row.addChild(nameLabel)
+
+            let descLabel = SKLabelNode(fontNamed: "Gameplay")
+            descLabel.text = achievement.description
+            descLabel.fontSize = 9
+            descLabel.fontColor = isUnlocked ? .lightGray : .darkGray
+            descLabel.horizontalAlignmentMode = .left
+            descLabel.verticalAlignmentMode = .center
+            descLabel.position = CGPoint(x: -frame.width * 0.25, y: -8)
+            row.addChild(descLabel)
+
+            overlay.addChild(row)
+            yPos -= 44
+        }
+
+        // Close button with icon
+        let closeBtn = UIFactory.createButtonWithIcon(
+            text: "CLOSE",
+            systemName: "xmark",
+            color: .systemRed,
+            size: CGSize(width: 150, height: 45),
+            iconSize: 14
+        )
+        closeBtn.position = CGPoint(x: 0, y: yPos - 20)
+        closeBtn.zPosition = 101
+        closeBtn.name = "close_popup"
+        overlay.addChild(closeBtn)
     }
-    
+
+    // MARK: - Touch Handling
+
     override func touchesBegan(_ touches: Set<UITouch>, with event: UIEvent?) {
         guard let touch = touches.first else { return }
         let location = touch.location(in: self)
         let nodes = self.nodes(at: location)
-        
-        // Handle Popups
+
+        // Handle popup
         if let overlay = childNode(withName: "popup_overlay") {
+            for node in nodes {
+                let target = node.name == "btn_body" ? node.parent : node
+                if target?.name == "close_popup" || node.name == "close_popup" {
+                    overlay.removeFromParent()
+                    haptic()
+                    return
+                }
+            }
             overlay.removeFromParent()
-            hapticFeedback.impactOccurred()
+            haptic()
             return
         }
-        
+
         for node in nodes {
-            let parent = (node.name == "btn_body") ? node.parent : node
+            let parent = (node.name == "btn_body" || node.name == "btn_label") ? node.parent : node
             let nodeName = parent?.name ?? node.name
-            
-            // Tactile feedback
             let feedbackTarget = parent ?? node
-            feedbackTarget.run(SKAction.scale(to: 0.9, duration: 0.1))
-            
-            if nodeName == "play_classic" {
-                animateTap(parent ?? node) {
-                    self.hapticFeedback.impactOccurred()
+
+            switch nodeName {
+            case "play_classic":
+                UIFactory.animateTap(feedbackTarget) { [weak self] in
+                    self?.haptic()
                     GameManager.shared.currentMode = .classic
-                    self.transitionToGame()
+                    self?.transitionToGame()
                 }
-            } else if nodeName == "play_zen" {
-                animateTap(parent ?? node) {
-                    self.hapticFeedback.impactOccurred()
+            case "play_zen":
+                UIFactory.animateTap(feedbackTarget) { [weak self] in
+                    self?.haptic()
                     GameManager.shared.currentMode = .zen
-                    self.transitionToGame()
+                    self?.transitionToGame()
                 }
-            } else if nodeName == "info" {
-                animateTap(parent ?? node) {
-                    self.hapticFeedback.impactOccurred()
-                    self.transitionToOnboarding()
+            case "play_daily":
+                guard !DailyChallengeManager.shared.hasCompletedToday else { return }
+                UIFactory.animateTap(feedbackTarget) { [weak self] in
+                    self?.haptic()
+                    GameManager.shared.currentMode = .dailyChallenge
+                    self?.transitionToGame()
                 }
+            case "info":
+                UIFactory.animateTap(feedbackTarget) { [weak self] in
+                    self?.haptic()
+                    self?.transitionToOnboarding()
+                }
+            case "settings":
+                UIFactory.animateTap(feedbackTarget) { [weak self] in
+                    guard let self = self else { return }
+                    self.haptic()
+                    let settings = SettingsScene(size: self.size)
+                    settings.scaleMode = .aspectFill
+                    self.view?.presentScene(settings, transition: SKTransition.fade(withDuration: 0.5))
+                }
+            case "stats":
+                UIFactory.animateTap(feedbackTarget) { [weak self] in
+                    guard let self = self else { return }
+                    self.haptic()
+                    let statsScene = StatsScene(size: self.size)
+                    statsScene.scaleMode = .aspectFill
+                    self.view?.presentScene(statsScene, transition: SKTransition.fade(withDuration: 0.5))
+                }
+            case "themes_btn":
+                UIFactory.animateTap(feedbackTarget) { [weak self] in
+                    guard let self = self else { return }
+                    self.haptic()
+                    let settings = SettingsScene(size: self.size)
+                    settings.scaleMode = .aspectFill
+                    self.view?.presentScene(settings, transition: SKTransition.fade(withDuration: 0.5))
+                }
+            case "achievements":
+                UIFactory.animateTap(feedbackTarget) { [weak self] in
+                    self?.haptic()
+                    self?.showAchievementsPopup()
+                }
+            default:
+                break
             }
         }
     }
-    
-    
-    private func animateTap(_ node: SKNode, completion: @escaping () -> Void) {
-        let scaleDown = SKAction.scale(to: 0.9, duration: 0.1)
-        let scaleUp = SKAction.scale(to: 1.0, duration: 0.1)
-        node.run(SKAction.sequence([scaleDown, scaleUp])) {
-            completion()
-        }
-    }
-    
+
+    // MARK: - Transitions
+
     func transitionToGame() {
         guard let view = self.view else { return }
         if let snapshot = view.texture(from: self) {
@@ -356,8 +416,16 @@ class MenuScene: SKScene {
             view.presentScene(gameScene, transition: transition)
         }
     }
-    
+
+    // MARK: - Helpers
+
+    private func haptic() {
+        guard GameManager.shared.hapticsEnabled else { return }
+        hapticFeedback.impactOccurred()
+    }
+
     private func playSound(_ fileName: String) {
+        guard GameManager.shared.soundEnabled else { return }
         run(SKAction.playSoundFileNamed(fileName, waitForCompletion: false))
     }
 }

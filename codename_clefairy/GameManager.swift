@@ -4,6 +4,7 @@ import UIKit
 enum GameMode {
     case classic
     case zen
+    case dailyChallenge
 }
 
 // MARK: - Game Manager
@@ -19,6 +20,17 @@ class GameManager {
     var highScore: Int {
         get { UserDefaults.standard.integer(forKey: kScore) }
         set { UserDefaults.standard.set(newValue, forKey: kScore) }
+    }
+
+    // MARK: - Settings
+    var soundEnabled: Bool {
+        get { UserDefaults.standard.object(forKey: "settings_sound") as? Bool ?? true }
+        set { UserDefaults.standard.set(newValue, forKey: "settings_sound") }
+    }
+
+    var hapticsEnabled: Bool {
+        get { UserDefaults.standard.object(forKey: "settings_haptics") as? Bool ?? true }
+        set { UserDefaults.standard.set(newValue, forKey: "settings_haptics") }
     }
     
     // Holiday-based Emoji Logic (Foundational rule-based model)
