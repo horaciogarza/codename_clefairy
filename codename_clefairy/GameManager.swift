@@ -45,7 +45,7 @@ class GameManager {
         case 3: // March - Spring
             return ["🌱", "🌷", "☘️", "🌈", "🦋", "🌦️", "🐣", "🍃"]
         case 4: // April - Easter/Rain
-            return ["🐰", "🥚", "☔️", "☔️", "🌼", "🧺", "🐝", "🍭"]
+            return ["🐰", "🥚", "☔️", "🌷", "🌼", "🧺", "🐝", "🍭"]
         case 5: // May - Flowers
             return ["🌸", "🌺", "☀️", "🍦", "🍓", "👒", "🛶", "💐"]
         case 6: // June - Summer
@@ -59,7 +59,7 @@ class GameManager {
         case 10: // October - Halloween
             return ["🎃", "👻", "🦇", "🕸️", "🍬", "🕷️", "💀", "🧙"]
         case 11: // November - Harvest
-            return ["🦃", "🥧", "🌽", "🧣", "🍂", "☕️", "🥧", "🕯️"]
+            return ["🦃", "🥧", "🌽", "🧣", "🍂", "☕️", "🍠", "🕯️"]
         case 12: // December - Christmas/Winter
             return ["🎄", "🎅", "🎁", "❄️", "☃️", "🦌", "🔔", "🍪"]
         default:

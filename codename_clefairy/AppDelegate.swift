@@ -23,11 +23,8 @@ class AppDelegate: UIResponder, UIApplicationDelegate {
     }
     
     func applicationDidBecomeActive(_ application: UIApplication) {
-        ATTrackingManager.requestTrackingAuthorization { status in
-            // Now you can load ads, regardless of the status
-            Task { @MainActor in
-                AdManager.shared.loadInterstitial()
-            }
+        Task { @MainActor in
+            AdManager.shared.loadInterstitial()
         }
     }
 

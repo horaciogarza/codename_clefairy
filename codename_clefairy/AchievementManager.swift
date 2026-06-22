@@ -160,10 +160,12 @@ class AchievementManager {
         container.addChild(desc)
 
         let safeBottom = scene.view?.safeAreaInsets.bottom ?? 20
-        container.position = CGPoint(x: scene.frame.midX, y: -50)
+        let bannerHeight: CGFloat = 60
+        let toastY = safeBottom + bannerHeight + 40
+        container.position = CGPoint(x: scene.frame.midX, y: -80)
         scene.addChild(container)
 
-        let slideIn = SKAction.moveTo(y: safeBottom + 50, duration: 0.4)
+        let slideIn = SKAction.moveTo(y: toastY, duration: 0.4)
         slideIn.timingMode = .easeOut
         let wait = SKAction.wait(forDuration: 2.5)
         let slideOut = SKAction.moveTo(y: -50, duration: 0.3)

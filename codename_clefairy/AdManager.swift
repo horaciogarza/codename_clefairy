@@ -22,6 +22,8 @@ class AdManager: NSObject, BannerViewDelegate, FullScreenContentDelegate {
     private let interstitialAdUnitID = "ca-app-pub-6811490856416526/9152085723"
     
     private var bannerView: BannerView?
+    private var lastInterstitialTime: Date?
+    private let interstitialCooldown: TimeInterval = 180 // 3 minutes between interstitials
     
     func setupBanner(in viewController: UIViewController) {
         let viewWidth = viewController.view.frame.inset(by: viewController.view.safeAreaInsets).width
@@ -64,7 +66,11 @@ class AdManager: NSObject, BannerViewDelegate, FullScreenContentDelegate {
     }
     
     func showInterstitial(from viewController: UIViewController) {
+        if let last = lastInterstitialTime, Date().timeIntervalSince(last) < interstitialCooldown {
+            return // too soon — skip this one
+        }
         if let interstitial = interstitial {
+            lastInterstitialTime = Date()
             interstitial.present(from: viewController)
         } else {
             print("Ad wasn't ready")

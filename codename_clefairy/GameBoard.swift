@@ -160,7 +160,7 @@ class GameBoard {
         switch movement {
         case .slow, .moderate, .fast:
             let speed = (movement == .slow) ? 2.5 : ((movement == .moderate) ? 1.5 : 0.8)
-            let d = CGFloat.random(in: 20...50)
+            let d = CGFloat.random(in: 10...25)
             container.run(SKAction.repeatForever(SKAction.sequence([
                 SKAction.moveBy(x: d, y: 0, duration: speed),
                 SKAction.moveBy(x: -d * 2, y: 0, duration: speed * 2),

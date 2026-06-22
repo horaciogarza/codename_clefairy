@@ -69,6 +69,18 @@ class DailyChallengeManager {
         }
     }
 
+    // MARK: - Deterministic Daily Pool
+
+    func getDailyPool(from emojis: [String], count: Int) -> [String] {
+        var rng = SeededRNG(seed: todaySeed &+ 99991)
+        var pool = emojis.sorted() // stable alphabetical base — same on every device
+        for i in stride(from: pool.count - 1, through: 1, by: -1) {
+            let j = Int(rng.next() % UInt64(i + 1))
+            pool.swapAt(i, j)
+        }
+        return Array(pool.prefix(count))
+    }
+
     // MARK: - Challenge Generation
 
     struct DailyRound {

@@ -16,18 +16,15 @@ class GameViewController: UIViewController {
 
     override func viewDidAppear(_ animated: Bool) {
         super.viewDidAppear(animated)
-        
-        // Request ATT permission
+
+        // Present the game immediately — don't gate the launch screen behind ATT.
+        presentLaunchScene()
+
+        // Request ATT after a short delay so it appears as an overlay above the game.
         if #available(iOS 14, *) {
-            ATTrackingManager.requestTrackingAuthorization { [weak self] status in
-                // This completion handler is called on a background thread.
-                // We need to switch to the main thread to present the scene.
-                DispatchQueue.main.async {
-                    self?.presentLaunchScene()
-                }
+            DispatchQueue.main.asyncAfter(deadline: .now() + 1.5) {
+                ATTrackingManager.requestTrackingAuthorization { _ in }
             }
-        } else {
-            presentLaunchScene()
         }
     }
     

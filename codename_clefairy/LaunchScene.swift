@@ -3,6 +3,7 @@ import SpriteKit
 class LaunchScene: SKScene {
 
     private var canSkip = false
+    private var isTransitioning = false
     private var skipLabel: SKLabelNode?
     private var bgRenderer: BackgroundRenderer?
 
@@ -110,11 +111,11 @@ class LaunchScene: SKScene {
     }
 
     override func touchesBegan(_ touches: Set<UITouch>, with event: UIEvent?) {
-        if canSkip {
-            removeAllActions()
-            children.forEach { $0.removeAllActions() }
-            transitionToMenu()
-        }
+        guard canSkip, !isTransitioning else { return }
+        isTransitioning = true
+        removeAllActions()
+        children.forEach { $0.removeAllActions() }
+        transitionToMenu()
     }
 
     // MARK: - Intro Animation
