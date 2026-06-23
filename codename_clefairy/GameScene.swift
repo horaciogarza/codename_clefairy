@@ -217,8 +217,12 @@ class GameScene: SKScene, GameTimerDelegate, BossControllerDelegate, InputContro
 
         if level % 5 == 0 {
             guard let stageNode = stageNode else { return }
+            let boss = BossDef.forLevel(level)
             gameState = .bossWarning
+            // Transform the whole screen to match this specific boss.
+            bgRenderer.applyBossEnvironment(boss)
             bossController.startBossRound(
+                boss: boss,
                 stageNode: stageNode,
                 levelLabel: levelLabel,
                 animations: animations,
@@ -836,6 +840,16 @@ class GameScene: SKScene, GameTimerDelegate, BossControllerDelegate, InputContro
     }
 
     private func setupBaseUI() {
+        // Reused label nodes are stored properties. On restart they may still be
+        // attached to a now-detached parent (e.g. the previous stageNode) and carry
+        // stale shadow children — detach and clear them before re-adding to avoid an
+        // "already has a parent" crash and duplicate-shadow buildup.
+        for label in [timerLabel, countdownLabel, centerDisplayLabel, levelLabel] {
+            label.removeFromParent()
+            label.removeAllChildren()
+            label.removeAllActions()
+        }
+
         let safeTop = view?.safeAreaInsets.top ?? 50
 
         let heartsContainer = SKNode()
@@ -946,8 +960,7 @@ class GameScene: SKScene, GameTimerDelegate, BossControllerDelegate, InputContro
     }
 
     private func setupHeatMeter() {
-        let safeTop = view?.safeAreaInsets.top ?? 50
-        let shiftY = size.height * 0.05
+        let safeBottom = view?.safeAreaInsets.bottom ?? 20
         let meterWidth: CGFloat = 120
         let meterHeight: CGFloat = 12
 
@@ -955,7 +968,8 @@ class GameScene: SKScene, GameTimerDelegate, BossControllerDelegate, InputContro
         bg.fillColor = .black.withAlphaComponent(0.3)
         bg.strokeColor = .white
         bg.lineWidth = 1
-        bg.position = CGPoint(x: frame.midX, y: frame.maxY - safeTop - 80 - shiftY)
+        // Bottom-center: keeps the top-center clear so the boss can drop in fully.
+        bg.position = CGPoint(x: frame.midX, y: frame.minY + safeBottom + 40)
         bg.zPosition = 50
         addChild(bg)
 

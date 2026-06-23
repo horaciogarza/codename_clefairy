@@ -74,6 +74,7 @@ class MenuScene: SKScene {
         highScoreLabel.fontSize = 18
         highScoreLabel.fontColor = .white
         highScoreLabel.horizontalAlignmentMode = .center
+        highScoreLabel.verticalAlignmentMode = .center
         highScoreLabel.position = CGPoint(x: streak > 0 ? -55 : 0, y: 0)
         statsLine.addChild(highScoreLabel)
 

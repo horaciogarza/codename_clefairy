@@ -38,16 +38,6 @@ class SettingsScene: SKScene {
 
         var yPos = title.position.y - 80
 
-        // Sound Toggle
-        let soundToggle = createToggleRow(
-            label: "SOUND",
-            isOn: GameManager.shared.soundEnabled,
-            y: yPos,
-            name: "toggle_sound"
-        )
-        addChild(soundToggle)
-        yPos -= 80
-
         // Haptics Toggle
         let hapticsToggle = createToggleRow(
             label: "HAPTICS",
@@ -227,13 +217,6 @@ class SettingsScene: SKScene {
             }
 
             let nodeName = target?.name ?? node.name
-
-            if nodeName == "toggle_sound" {
-                GameManager.shared.soundEnabled.toggle()
-                updateToggleState(name: "toggle_sound", isOn: GameManager.shared.soundEnabled)
-                hapticFeedback.impactOccurred()
-                return
-            }
 
             if nodeName == "toggle_haptics" {
                 GameManager.shared.hapticsEnabled.toggle()
