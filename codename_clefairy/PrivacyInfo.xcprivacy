@@ -2,11 +2,13 @@
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
 <plist version="1.0">
 <dict>
-	<!-- The app uses the AdMob SDK, which tracks the user across apps/websites when ATT is granted. -->
+	<!-- First-party code does not track. Tracking (and ATT) is performed by the
+	     Google Mobile Ads SDK, which ships its own privacy manifest declaring
+	     NSPrivacyTracking=true and its tracking domains. Apple merges all SDK
+	     manifests with this one, so first-party tracking is declared false here.
+	     NSPrivacyTracking must only be true when NSPrivacyTrackingDomains is non-empty. -->
 	<key>NSPrivacyTracking</key>
-	<true/>
-	<!-- Domains that engage in tracking. The Google Mobile Ads SDK ships its own
-	     privacy manifest declaring its tracking domains; none are added by first-party code. -->
+	<false/>
 	<key>NSPrivacyTrackingDomains</key>
 	<array/>
 	<!-- First-party code does not collect or transmit any data off-device.
