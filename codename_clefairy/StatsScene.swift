@@ -17,6 +17,8 @@ class StatsScene: SKScene {
 
     private func setupUI() {
         let safeTop = view?.safeAreaInsets.top ?? 50
+        let safeBottom = view?.safeAreaInsets.bottom ?? 20
+        let bannerHeight: CGFloat = 60
         let stats = StatsManager.shared
 
         // Title
@@ -49,20 +51,37 @@ class StatsScene: SKScene {
             ("ACHIEVEMENTS", "\(AchievementManager.shared.unlockedCount)/\(AchievementManager.allAchievements.count)"),
         ]
 
-        var yPos = title.position.y - 70
+        // Back button anchored above the banner so it never overlaps on small screens
+        let backBtnY = safeBottom + bannerHeight + 45
+        let backBtn = UIFactory.createCartoonButton(
+            text: "BACK",
+            color: .systemBlue,
+            size: CGSize(width: frame.width * 0.5, height: 55)
+        )
+        backBtn.position = CGPoint(x: frame.midX, y: backBtnY)
+        backBtn.name = "back"
+        addChild(backBtn)
+
+        // Distribute rows evenly in the space between title and back button
+        let rowsTop = title.position.y - 65
+        let rowsBottom = backBtnY + 50
+        let availableHeight = rowsTop - rowsBottom
+        let spacing = min(48, max(36, availableHeight / CGFloat(statItems.count)))
+
+        var yPos = rowsTop
 
         for (label, value) in statItems {
             let row = SKNode()
             row.position = CGPoint(x: frame.midX, y: yPos)
 
-            let bg = SKShapeNode(rectOf: CGSize(width: frame.width * 0.85, height: 40), cornerRadius: 10)
+            let bg = SKShapeNode(rectOf: CGSize(width: frame.width * 0.85, height: 38), cornerRadius: 10)
             bg.fillColor = .white.withAlphaComponent(0.1)
             bg.strokeColor = .clear
             row.addChild(bg)
 
             let labelNode = SKLabelNode(fontNamed: "Gameplay")
             labelNode.text = label
-            labelNode.fontSize = 14
+            labelNode.fontSize = 13
             labelNode.fontColor = .lightGray
             labelNode.horizontalAlignmentMode = .left
             labelNode.verticalAlignmentMode = .center
@@ -71,7 +90,7 @@ class StatsScene: SKScene {
 
             let valueNode = SKLabelNode(fontNamed: "Gameplay")
             valueNode.text = value
-            valueNode.fontSize = 16
+            valueNode.fontSize = 15
             valueNode.fontColor = .white
             valueNode.horizontalAlignmentMode = .right
             valueNode.verticalAlignmentMode = .center
@@ -79,18 +98,8 @@ class StatsScene: SKScene {
             row.addChild(valueNode)
 
             addChild(row)
-            yPos -= 48
+            yPos -= spacing
         }
-
-        // Back button
-        let backBtn = UIFactory.createCartoonButton(
-            text: "BACK",
-            color: .systemBlue,
-            size: CGSize(width: frame.width * 0.5, height: 60)
-        )
-        backBtn.position = CGPoint(x: frame.midX, y: yPos - 30)
-        backBtn.name = "back"
-        addChild(backBtn)
     }
 
     private func formatTime(_ seconds: TimeInterval) -> String {

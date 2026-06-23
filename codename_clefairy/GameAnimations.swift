@@ -86,25 +86,78 @@ class GameAnimations {
     func showLevelUp(at position: CGPoint, completion: @escaping () -> Void) {
         guard let scene = scene else { return }
 
-        // Confetti
-        for _ in 0..<20 {
-            let conf = SKShapeNode(rectOf: CGSize(width: 10, height: 10))
-            conf.fillColor = [.red, .yellow, .green, .blue, .purple].randomElement()!
+        let burstOrigin = CGPoint(x: scene.frame.midX, y: scene.frame.midY + 100)
+        let palette: [SKColor] = [.systemRed, .systemYellow, .systemGreen, .systemBlue, .systemPurple, .systemPink, .systemOrange, .systemTeal]
+
+        // Radial confetti burst — pixel squares spinning outward.
+        for _ in 0..<60 {
+            let confSize = CGFloat([8, 10, 12, 14].randomElement()!)
+            let conf = SKShapeNode(rectOf: CGSize(width: confSize, height: confSize))
+            conf.fillColor = palette.randomElement()!
             conf.strokeColor = .clear
-            conf.position = CGPoint(x: scene.frame.midX, y: scene.frame.midY + 100)
+            conf.position = burstOrigin
             conf.zPosition = 145
+            conf.zRotation = CGFloat.random(in: 0...(.pi))
             scene.addChild(conf)
 
             let angle = CGFloat.random(in: 0...(.pi * 2))
-            let dist = CGFloat.random(in: 100...300)
-            let dest = CGPoint(x: scene.frame.midX + cos(angle) * dist, y: scene.frame.midY + 100 + sin(angle) * dist)
-            conf.run(SKAction.group([
-                SKAction.move(to: dest, duration: 0.8),
-                SKAction.rotate(byAngle: .pi * 4, duration: 0.8),
-                SKAction.fadeOut(withDuration: 0.8)
-            ])) {
-                conf.removeFromParent()
-            }
+            let dist = CGFloat.random(in: 120...360)
+            let dur = Double.random(in: 0.7...1.1)
+            let dest = CGPoint(x: burstOrigin.x + cos(angle) * dist, y: burstOrigin.y + sin(angle) * dist)
+            conf.run(SKAction.sequence([
+                SKAction.group([
+                    SKAction.move(to: dest, duration: dur),
+                    SKAction.rotate(byAngle: .pi * CGFloat.random(in: 3...6), duration: dur),
+                    SKAction.sequence([SKAction.wait(forDuration: dur * 0.6), SKAction.fadeOut(withDuration: dur * 0.4)])
+                ]),
+                SKAction.removeFromParent()
+            ]))
+        }
+
+        // Confetti rain — falls from the top of the screen with a little sway.
+        for _ in 0..<40 {
+            let confSize = CGFloat([6, 8, 10].randomElement()!)
+            let conf = SKShapeNode(rectOf: CGSize(width: confSize, height: confSize))
+            conf.fillColor = palette.randomElement()!
+            conf.strokeColor = .clear
+            conf.position = CGPoint(x: CGFloat.random(in: 0...scene.frame.width), y: scene.frame.maxY + 20)
+            conf.zPosition = 145
+            scene.addChild(conf)
+
+            let fallDur = Double.random(in: 1.0...1.8)
+            let sway = CGFloat.random(in: -40...40)
+            conf.run(SKAction.sequence([
+                SKAction.wait(forDuration: Double.random(in: 0...0.4)),
+                SKAction.group([
+                    SKAction.moveBy(x: sway, y: -(scene.frame.height + 60), duration: fallDur),
+                    SKAction.rotate(byAngle: .pi * CGFloat.random(in: 2...5), duration: fallDur),
+                    SKAction.sequence([SKAction.wait(forDuration: fallDur * 0.7), SKAction.fadeOut(withDuration: fallDur * 0.3)])
+                ]),
+                SKAction.removeFromParent()
+            ]))
+        }
+
+        // Twinkling star sparkles around the banner.
+        for _ in 0..<18 {
+            let star = SKLabelNode(text: "✨")
+            star.fontSize = CGFloat.random(in: 18...34)
+            star.position = CGPoint(
+                x: burstOrigin.x + CGFloat.random(in: -180...180),
+                y: burstOrigin.y + CGFloat.random(in: -120...120)
+            )
+            star.zPosition = 146
+            star.setScale(0)
+            scene.addChild(star)
+            star.run(SKAction.sequence([
+                SKAction.wait(forDuration: Double.random(in: 0...0.5)),
+                SKAction.scale(to: 1.0, duration: 0.2),
+                SKAction.wait(forDuration: 0.3),
+                SKAction.group([
+                    SKAction.scale(to: 0, duration: 0.3),
+                    SKAction.fadeOut(withDuration: 0.3)
+                ]),
+                SKAction.removeFromParent()
+            ]))
         }
 
         let congrats = SKLabelNode(fontNamed: "Gameplay")
@@ -212,13 +265,13 @@ class GameAnimations {
 
     // MARK: - Boss Entrance
 
-    func showBossEntrance(stageNode: SKShapeNode, playSound: @escaping (String) -> Void, completion: @escaping (SKLabelNode) -> Void) {
+    func showBossEntrance(boss: BossDef, stageNode: SKShapeNode, playSound: @escaping (String) -> Void, completion: @escaping (SKLabelNode) -> Void) {
         guard let scene = scene else { return }
 
         // Dramatic screen flash
         let flashOverlayBoss = SKShapeNode(rectOf: scene.size)
         flashOverlayBoss.position = CGPoint(x: scene.frame.midX, y: scene.frame.midY)
-        flashOverlayBoss.fillColor = .red
+        flashOverlayBoss.fillColor = boss.accentColor
         flashOverlayBoss.strokeColor = .clear
         flashOverlayBoss.alpha = 0
         flashOverlayBoss.zPosition = 200
@@ -232,9 +285,9 @@ class GameAnimations {
 
         // Warning text
         let warningLabel = SKLabelNode(fontNamed: "Gameplay")
-        warningLabel.text = "⚠️ BOSS INCOMING ⚠️"
-        warningLabel.fontSize = 28
-        warningLabel.fontColor = .systemRed
+        warningLabel.text = "⚠️ \(boss.name) ⚠️"
+        warningLabel.fontSize = 24
+        warningLabel.fontColor = boss.accentColor
         warningLabel.position = CGPoint(x: scene.frame.midX, y: scene.frame.midY + 200)
         warningLabel.zPosition = 150
         warningLabel.alpha = 0
@@ -255,13 +308,13 @@ class GameAnimations {
         scene.run(SKAction.wait(forDuration: 1.5)) { [weak scene] in
             guard let scene = scene else { return }
 
-            let boss = SKLabelNode(text: "🐙")
-            boss.fontSize = 142.5
-            boss.position = CGPoint(x: scene.frame.midX, y: scene.frame.maxY + 150)
-            boss.zPosition = 10
-            boss.name = "boss"
-            boss.setScale(0.3)
-            scene.addChild(boss)
+            let bossNode = SKLabelNode(text: boss.emoji)
+            bossNode.fontSize = 142.5
+            bossNode.position = CGPoint(x: scene.frame.midX, y: scene.frame.maxY + 150)
+            bossNode.zPosition = 10
+            bossNode.name = "boss"
+            bossNode.setScale(0.3)
+            scene.addChild(bossNode)
 
             let targetY = scene.frame.maxY - 200
             let dropDown = SKAction.move(to: CGPoint(x: scene.frame.midX, y: targetY), duration: 0.5)
@@ -281,7 +334,7 @@ class GameAnimations {
 
                 for _ in 0..<12 {
                     let particle = SKShapeNode(circleOfRadius: CGFloat.random(in: 5...12))
-                    particle.fillColor = [SKColor.red, SKColor.orange, SKColor.yellow].randomElement()!
+                    particle.fillColor = [boss.accentColor, boss.hillColor, SKColor.white].randomElement()!
                     particle.strokeColor = .clear
                     particle.position = CGPoint(x: scene.frame.midX, y: targetY - 50)
                     particle.zPosition = 9
@@ -300,7 +353,7 @@ class GameAnimations {
                 }
             }
 
-            boss.run(SKAction.sequence([
+            bossNode.run(SKAction.sequence([
                 SKAction.group([dropDown, scaleUp]),
                 impact
             ])) {
@@ -308,8 +361,8 @@ class GameAnimations {
                     SKAction.scaleX(to: 1.1, y: 0.9, duration: 0.5),
                     SKAction.scaleX(to: 0.9, y: 1.1, duration: 0.5)
                 ])
-                boss.run(SKAction.repeatForever(wobble))
-                completion(boss)
+                bossNode.run(SKAction.repeatForever(wobble))
+                completion(bossNode)
             }
         }
     }

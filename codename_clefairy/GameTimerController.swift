@@ -98,9 +98,18 @@ class GameTimerController {
         }
     }
 
-    // Get timer duration for a given level and boss state
+    // Get timer duration for a given level and boss state.
+    // Time per emoji decreases as level rises so the game gets harder, not easier.
     static func timerDuration(for level: Int, isBoss: Bool, hasSlowMo: Bool) -> Int {
-        let base = isBoss ? 10 : (7 * level)
+        let base: Int
+        if isBoss {
+            base = 15
+        } else {
+            let seqLength = GameBoard.getLevelConfig(for: level).sequenceLength
+            // 5 → 2 seconds per emoji as level climbs
+            let secondsPerEmoji = max(2, 5 - level / 3)
+            base = seqLength * secondsPerEmoji
+        }
         return hasSlowMo ? base * 2 : base
     }
 }

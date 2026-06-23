@@ -17,6 +17,8 @@ class SettingsScene: SKScene {
 
     private func setupUI() {
         let safeTop = view?.safeAreaInsets.top ?? 50
+        let safeBottom = view?.safeAreaInsets.bottom ?? 20
+        let bannerHeight: CGFloat = 60
 
         // Title
         let title = SKLabelNode(fontNamed: "Gameplay")
@@ -35,16 +37,6 @@ class SettingsScene: SKScene {
         title.addChild(shadow)
 
         var yPos = title.position.y - 80
-
-        // Sound Toggle
-        let soundToggle = createToggleRow(
-            label: "SOUND",
-            isOn: GameManager.shared.soundEnabled,
-            y: yPos,
-            name: "toggle_sound"
-        )
-        addChild(soundToggle)
-        yPos -= 80
 
         // Haptics Toggle
         let hapticsToggle = createToggleRow(
@@ -76,15 +68,15 @@ class SettingsScene: SKScene {
         themesBtn.position = CGPoint(x: frame.midX, y: yPos)
         themesBtn.name = "themes"
         addChild(themesBtn)
-        yPos -= 100
 
-        // Back
+        // Back — anchored above the banner so it never overlaps on small screens
+        let backBtnY = safeBottom + bannerHeight + 45
         let backBtn = UIFactory.createCartoonButton(
             text: "BACK",
             color: .systemBlue,
             size: CGSize(width: frame.width * 0.5, height: 60)
         )
-        backBtn.position = CGPoint(x: frame.midX, y: yPos)
+        backBtn.position = CGPoint(x: frame.midX, y: max(backBtnY, yPos - 100))
         backBtn.name = "back"
         addChild(backBtn)
     }
@@ -225,13 +217,6 @@ class SettingsScene: SKScene {
             }
 
             let nodeName = target?.name ?? node.name
-
-            if nodeName == "toggle_sound" {
-                GameManager.shared.soundEnabled.toggle()
-                updateToggleState(name: "toggle_sound", isOn: GameManager.shared.soundEnabled)
-                hapticFeedback.impactOccurred()
-                return
-            }
 
             if nodeName == "toggle_haptics" {
                 GameManager.shared.hapticsEnabled.toggle()

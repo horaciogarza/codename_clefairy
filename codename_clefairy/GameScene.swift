@@ -48,10 +48,11 @@ class GameScene: SKScene, GameTimerDelegate, BossControllerDelegate, InputContro
     private var timerOverlay: SKShapeNode?
     private var flashOverlay: SKShapeNode?
     private var heatMeterNode: SKShapeNode?
+    private var centerDisplayBackground: SKShapeNode?
+    private var heatMeterInnerWidth: CGFloat = 0
     private var peekButton: SKNode?
     private var pauseButton: SKNode?
 
-    private var jellyDripTimer: Timer?
     private var cachedMasterEmojiPool: [String] = []
 
     private let hapticFeedback = UIImpactFeedbackGenerator(style: .medium)
@@ -72,7 +73,13 @@ class GameScene: SKScene, GameTimerDelegate, BossControllerDelegate, InputContro
         inputController = InputController()
         inputController.delegate = self
 
-        cachedMasterEmojiPool = GameManager.shared.getActivePool(count: 30)
+        let allEmojis = GameManager.shared.thematicEmojis + GameManager.shared.defaultEmojis
+        if GameManager.shared.currentMode == .dailyChallenge {
+            // Deterministic pool: same emoji set for every player on a given day
+            cachedMasterEmojiPool = DailyChallengeManager.shared.getDailyPool(from: allEmojis, count: 30)
+        } else {
+            cachedMasterEmojiPool = GameManager.shared.getActivePool(count: 30)
+        }
 
         StatsManager.shared.recordGameStart()
         StatsManager.shared.recordDailyPlay()
@@ -83,6 +90,9 @@ class GameScene: SKScene, GameTimerDelegate, BossControllerDelegate, InputContro
         setupOverlays()
         setupHeatMeter()
         setupPauseButton()
+
+        // Contain physics-enabled buttons (level 16+) within the screen
+        physicsBody = SKPhysicsBody(edgeLoopFrom: frame)
 
         Task { @MainActor in
             AdManager.shared.hideBanner()
@@ -122,7 +132,6 @@ class GameScene: SKScene, GameTimerDelegate, BossControllerDelegate, InputContro
     }
 
     override func willMove(from view: SKView) {
-        jellyDripTimer?.invalidate()
         timerController.invalidate()
         Task { @MainActor in
             AdManager.shared.cleanupCallbacks()
@@ -142,22 +151,22 @@ class GameScene: SKScene, GameTimerDelegate, BossControllerDelegate, InputContro
         let previousState = gameState
         gameState = .paused(previous: previousState)
         timerController.invalidate()
-        isPaused = true
 
         let overlay = PauseOverlay(size: self.size)
         overlay.delegate = self
         addChild(overlay)
         self.pauseOverlay = overlay
-        isPaused = false // Allow overlay interaction
+
+        isPaused = true // freeze all actions/animations; touches still reach touchesBegan
     }
 
     func pauseOverlayDidResume() {
+        isPaused = false
         pauseOverlay?.removeFromParent()
         pauseOverlay = nil
 
         if case .paused(let prev) = gameState {
             gameState = prev
-            // Restart timer if we were awaiting input
             if prev == .awaitingInput || prev == .bossAwaitingInput {
                 let duration = timerController.remainingTime
                 let mode = GameManager.shared.currentMode
@@ -169,12 +178,14 @@ class GameScene: SKScene, GameTimerDelegate, BossControllerDelegate, InputContro
     }
 
     func pauseOverlayDidRestart() {
+        isPaused = false
         pauseOverlay?.removeFromParent()
         pauseOverlay = nil
         restartGame()
     }
 
     func pauseOverlayDidGoToMenu() {
+        isPaused = false
         pauseOverlay?.removeFromParent()
         pauseOverlay = nil
         transitionToMenu()
@@ -206,8 +217,12 @@ class GameScene: SKScene, GameTimerDelegate, BossControllerDelegate, InputContro
 
         if level % 5 == 0 {
             guard let stageNode = stageNode else { return }
+            let boss = BossDef.forLevel(level)
             gameState = .bossWarning
+            // Transform the whole screen to match this specific boss.
+            bgRenderer.applyBossEnvironment(boss)
             bossController.startBossRound(
+                boss: boss,
                 stageNode: stageNode,
                 levelLabel: levelLabel,
                 animations: animations,
@@ -419,8 +434,13 @@ class GameScene: SKScene, GameTimerDelegate, BossControllerDelegate, InputContro
                 guard let self = self else { return }
                 let correct = i < result.perItemCorrect.count ? result.perItemCorrect[i] : false
                 self.centerDisplayLabel.text = self.currentSequence[i]
-                self.centerDisplayLabel.fontColor = correct ? .systemGreen : .systemRed
                 self.centerDisplayLabel.alpha = 1
+                // Color emoji glyphs ignore fontColor — show a tinted ring behind instead
+                self.centerDisplayBackground?.fillColor = correct
+                    ? UIColor.systemGreen.withAlphaComponent(0.25)
+                    : UIColor.systemRed.withAlphaComponent(0.25)
+                self.centerDisplayBackground?.strokeColor = correct ? .systemGreen : .systemRed
+                self.centerDisplayBackground?.alpha = 1
                 self.playSound(correct ? "correct.mp3" : "wrong.mp3")
 
                 if i < self.userSequence.count,
@@ -442,7 +462,10 @@ class GameScene: SKScene, GameTimerDelegate, BossControllerDelegate, InputContro
             }
             let hide = SKAction.sequence([
                 SKAction.wait(forDuration: 0.5),
-                SKAction.run { [weak self] in self?.centerDisplayLabel.alpha = 0 }
+                SKAction.run { [weak self] in
+                    self?.centerDisplayLabel.alpha = 0
+                    self?.centerDisplayBackground?.alpha = 0
+                }
             ])
             run(SKAction.sequence([wait, show, hide]))
             delay += 0.7
@@ -718,7 +741,12 @@ class GameScene: SKScene, GameTimerDelegate, BossControllerDelegate, InputContro
         let color: SKColor = scoring.isFrenzyMode ? .systemRed : .systemYellow
         heatMeterNode?.fillColor = color
         let targetScale = max(0.01, scoring.heatValue)
-        heatMeterNode?.run(SKAction.scaleX(to: targetScale, duration: 0.2))
+        // Move x so the left edge stays fixed — bar fills left→right
+        let targetX = heatMeterInnerWidth * (targetScale - 1) / 2
+        heatMeterNode?.run(SKAction.group([
+            SKAction.scaleX(to: targetScale, y: 1.0, duration: 0.2),
+            SKAction.move(to: CGPoint(x: targetX, y: 0), duration: 0.2)
+        ]))
     }
 
     private func startFrenzy() {
@@ -785,7 +813,6 @@ class GameScene: SKScene, GameTimerDelegate, BossControllerDelegate, InputContro
         let shiftY = self.size.height * 0.05
 
         stageNode?.removeFromParent()
-        jellyDripTimer?.invalidate()
 
         let shadow = SKShapeNode(rectOf: size, cornerRadius: 40)
         shadow.fillColor = .black.withAlphaComponent(0.3)
@@ -813,6 +840,16 @@ class GameScene: SKScene, GameTimerDelegate, BossControllerDelegate, InputContro
     }
 
     private func setupBaseUI() {
+        // Reused label nodes are stored properties. On restart they may still be
+        // attached to a now-detached parent (e.g. the previous stageNode) and carry
+        // stale shadow children — detach and clear them before re-adding to avoid an
+        // "already has a parent" crash and duplicate-shadow buildup.
+        for label in [timerLabel, countdownLabel, centerDisplayLabel, levelLabel] {
+            label.removeFromParent()
+            label.removeAllChildren()
+            label.removeAllActions()
+        }
+
         let safeTop = view?.safeAreaInsets.top ?? 50
 
         let heartsContainer = SKNode()
@@ -874,6 +911,15 @@ class GameScene: SKScene, GameTimerDelegate, BossControllerDelegate, InputContro
         centerDisplayLabel.alpha = 0
         stageNode?.addChild(centerDisplayLabel)
 
+        let displayBg = SKShapeNode(circleOfRadius: 72)
+        displayBg.fillColor = .clear
+        displayBg.strokeColor = .clear
+        displayBg.lineWidth = 5
+        displayBg.zPosition = -1
+        displayBg.alpha = 0
+        stageNode?.addChild(displayBg)
+        centerDisplayBackground = displayBg
+
         levelLabel.text = "LEVEL \(level)"
         levelLabel.fontSize = 32
         levelLabel.fontColor = .white
@@ -914,8 +960,7 @@ class GameScene: SKScene, GameTimerDelegate, BossControllerDelegate, InputContro
     }
 
     private func setupHeatMeter() {
-        let safeTop = view?.safeAreaInsets.top ?? 50
-        let shiftY = size.height * 0.05
+        let safeBottom = view?.safeAreaInsets.bottom ?? 20
         let meterWidth: CGFloat = 120
         let meterHeight: CGFloat = 12
 
@@ -923,14 +968,19 @@ class GameScene: SKScene, GameTimerDelegate, BossControllerDelegate, InputContro
         bg.fillColor = .black.withAlphaComponent(0.3)
         bg.strokeColor = .white
         bg.lineWidth = 1
-        bg.position = CGPoint(x: frame.midX, y: frame.maxY - safeTop - 80 - shiftY)
+        // Bottom-center: keeps the top-center clear so the boss can drop in fully.
+        bg.position = CGPoint(x: frame.midX, y: frame.minY + safeBottom + 40)
         bg.zPosition = 50
         addChild(bg)
 
-        let progress = SKShapeNode(rectOf: CGSize(width: meterWidth - 2, height: meterHeight - 2), cornerRadius: 5)
+        let innerWidth = meterWidth - 2
+        heatMeterInnerWidth = innerWidth
+        let progress = SKShapeNode(rectOf: CGSize(width: innerWidth, height: meterHeight - 2), cornerRadius: 5)
         progress.fillColor = .systemYellow
         progress.strokeColor = .clear
         progress.xScale = 0.01
+        // Offset so the left edge stays fixed as xScale animates (fills left→right)
+        progress.position = CGPoint(x: innerWidth * (0.01 - 1) / 2, y: 0)
         progress.name = "heat_progress"
         bg.addChild(progress)
         heatMeterNode = progress
@@ -1003,7 +1053,12 @@ class GameScene: SKScene, GameTimerDelegate, BossControllerDelegate, InputContro
         heartNodes.removeAll()
         removeAllChildren()
 
-        cachedMasterEmojiPool = GameManager.shared.getActivePool(count: 30)
+        let allEmojis = GameManager.shared.thematicEmojis + GameManager.shared.defaultEmojis
+        if GameManager.shared.currentMode == .dailyChallenge {
+            cachedMasterEmojiPool = DailyChallengeManager.shared.getDailyPool(from: allEmojis, count: 30)
+        } else {
+            cachedMasterEmojiPool = GameManager.shared.getActivePool(count: 30)
+        }
 
         bgRenderer = BackgroundRenderer(scene: self)
         animations = GameAnimations(scene: self)

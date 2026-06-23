@@ -1,0 +1,32 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+	<!-- The app uses the AdMob SDK, which tracks the user across apps/websites when ATT is granted. -->
+	<key>NSPrivacyTracking</key>
+	<true/>
+	<!-- Domains that engage in tracking. The Google Mobile Ads SDK ships its own
+	     privacy manifest declaring its tracking domains; none are added by first-party code. -->
+	<key>NSPrivacyTrackingDomains</key>
+	<array/>
+	<!-- First-party code does not collect or transmit any data off-device.
+	     All scores, stats, achievements and settings are stored locally only.
+	     Advertising data collection is declared by the AdMob SDK's bundled manifest. -->
+	<key>NSPrivacyCollectedDataTypes</key>
+	<array/>
+	<!-- Required-reason API declarations for first-party code. -->
+	<key>NSPrivacyAccessedAPITypes</key>
+	<array>
+		<dict>
+			<!-- UserDefaults is used to persist game settings, scores and progress
+			     for this app only (no tracking). Reason code CA92.1. -->
+			<key>NSPrivacyAccessedAPIType</key>
+			<string>NSPrivacyAccessedAPICategoryUserDefaults</string>
+			<key>NSPrivacyAccessedAPITypeReasons</key>
+			<array>
+				<string>CA92.1</string>
+			</array>
+		</dict>
+	</array>
+</dict>
+</plist>

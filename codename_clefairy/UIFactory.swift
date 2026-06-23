@@ -28,21 +28,61 @@ struct UIFactory {
 
     // MARK: - Buttons
 
-    static func createCartoonButton(text: String, color: SKColor, size: CGSize, cornerRadius: CGFloat = 25) -> SKNode {
+    /// Builds a chunky 8-bit button base: sharp corners, a hard offset drop-shadow
+    /// block, a thick black outline, and bevel highlight/shade strips. All tappable
+    /// pieces are named "btn_body" so the scenes' touch routing keeps working.
+    private static func pixelButtonBase(size: CGSize, color: SKColor) -> SKNode {
         let container = SKNode()
 
-        let shadow = SKShapeNode(rectOf: size, cornerRadius: cornerRadius)
-        shadow.fillColor = .black.withAlphaComponent(0.4)
+        // Hard, solid drop shadow (no soft alpha falloff — classic pixel look).
+        let shadow = SKShapeNode(rectOf: size, cornerRadius: 0)
+        shadow.fillColor = .black.withAlphaComponent(0.55)
         shadow.strokeColor = .clear
-        shadow.position = CGPoint(x: 0, y: -8)
+        shadow.position = CGPoint(x: 5, y: -6)
         container.addChild(shadow)
 
-        let body = SKShapeNode(rectOf: size, cornerRadius: cornerRadius)
+        // Body with a thick black outline.
+        let body = SKShapeNode(rectOf: size, cornerRadius: 0)
         body.fillColor = color
-        body.strokeColor = .white
-        body.lineWidth = 6
+        body.strokeColor = .black
+        body.lineWidth = 4
         body.name = "btn_body"
         container.addChild(body)
+
+        // Top highlight + bottom shade strips for a beveled pixel edge.
+        let stripWidth = size.width - 18
+        let highlight = SKShapeNode(rectOf: CGSize(width: stripWidth, height: 5), cornerRadius: 0)
+        highlight.fillColor = adjustBrightness(color, by: 0.22)
+        highlight.strokeColor = .clear
+        highlight.position = CGPoint(x: 0, y: size.height / 2 - 11)
+        highlight.zPosition = 0.5
+        highlight.name = "btn_body"
+        container.addChild(highlight)
+
+        let shade = SKShapeNode(rectOf: CGSize(width: stripWidth, height: 5), cornerRadius: 0)
+        shade.fillColor = adjustBrightness(color, by: -0.22)
+        shade.strokeColor = .clear
+        shade.position = CGPoint(x: 0, y: -size.height / 2 + 11)
+        shade.zPosition = 0.5
+        shade.name = "btn_body"
+        container.addChild(shade)
+
+        return container
+    }
+
+    private static func adjustBrightness(_ color: SKColor, by delta: CGFloat) -> SKColor {
+        var r: CGFloat = 0, g: CGFloat = 0, b: CGFloat = 0, a: CGFloat = 0
+        color.getRed(&r, green: &g, blue: &b, alpha: &a)
+        return SKColor(
+            red: max(0, min(1, r + delta)),
+            green: max(0, min(1, g + delta)),
+            blue: max(0, min(1, b + delta)),
+            alpha: a
+        )
+    }
+
+    static func createCartoonButton(text: String, color: SKColor, size: CGSize, cornerRadius: CGFloat = 25) -> SKNode {
+        let container = pixelButtonBase(size: size, color: color)
 
         let label = SKLabelNode(fontNamed: "Gameplay")
         label.text = text
@@ -57,20 +97,7 @@ struct UIFactory {
     }
 
     static func createButtonWithIcon(text: String, systemName: String, color: SKColor, size: CGSize, iconSize: CGFloat = 20) -> SKNode {
-        let container = SKNode()
-
-        let shadow = SKShapeNode(rectOf: size, cornerRadius: 25)
-        shadow.fillColor = .black.withAlphaComponent(0.4)
-        shadow.strokeColor = .clear
-        shadow.position = CGPoint(x: 0, y: -8)
-        container.addChild(shadow)
-
-        let body = SKShapeNode(rectOf: size, cornerRadius: 25)
-        body.fillColor = color
-        body.strokeColor = .white
-        body.lineWidth = 6
-        body.name = "btn_body"
-        container.addChild(body)
+        let container = pixelButtonBase(size: size, color: color)
 
         if let icon = symbolSprite(systemName, pointSize: iconSize, color: .white, size: CGSize(width: iconSize, height: iconSize)) {
             // Measure text width to center the icon+gap+text group
@@ -148,20 +175,7 @@ struct UIFactory {
     // MARK: - Icon Buttons (circular)
 
     static func createIconButton(systemName: String, color: SKColor, size: CGFloat = 50, iconSize: CGFloat = 22) -> SKNode {
-        let container = SKNode()
-
-        let shadow = SKShapeNode(circleOfRadius: size / 2)
-        shadow.fillColor = .black.withAlphaComponent(0.25)
-        shadow.strokeColor = .clear
-        shadow.position = CGPoint(x: 2, y: -3)
-        container.addChild(shadow)
-
-        let body = SKShapeNode(circleOfRadius: size / 2)
-        body.fillColor = color
-        body.strokeColor = .white
-        body.lineWidth = 3
-        body.name = "btn_body"
-        container.addChild(body)
+        let container = pixelButtonBase(size: CGSize(width: size, height: size), color: color)
 
         if let icon = symbolSprite(systemName, pointSize: iconSize, color: .white, size: CGSize(width: iconSize, height: iconSize)) {
             icon.zPosition = 1
@@ -172,20 +186,7 @@ struct UIFactory {
     }
 
     static func createIconButton(text: String, color: SKColor, size: CGFloat = 50) -> SKNode {
-        let container = SKNode()
-
-        let shadow = SKShapeNode(circleOfRadius: size / 2)
-        shadow.fillColor = .black.withAlphaComponent(0.25)
-        shadow.strokeColor = .clear
-        shadow.position = CGPoint(x: 2, y: -3)
-        container.addChild(shadow)
-
-        let body = SKShapeNode(circleOfRadius: size / 2)
-        body.fillColor = color
-        body.strokeColor = .white
-        body.lineWidth = 3
-        body.name = "btn_body"
-        container.addChild(body)
+        let container = pixelButtonBase(size: CGSize(width: size, height: size), color: color)
 
         let label = SKLabelNode(fontNamed: "AppleColorEmoji")
         label.text = text
